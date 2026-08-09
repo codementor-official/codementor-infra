@@ -36,7 +36,8 @@ The infrastructure is intentionally separated by responsibility:
 * **Kubernetes** — Container orchestration and deployment configuration.
 * **Monitoring** — Observability and operational infrastructure.
 * **Scripts** — Utility scripts for development and infrastructure management.
-* **Docs** — Infrastructure architecture and operational documentation.
+
+Each area is self-contained: it owns its own `Makefile`, `README.md`, `docs/`, and — when the area becomes complex enough to need agent guidance — its own `CLAUDE.md`. There is no repository-wide `docs/` directory; documentation lives next to the infrastructure it describes.
 
 ---
 
@@ -46,19 +47,24 @@ The infrastructure is intentionally separated by responsibility:
 codementor-infra/
 │
 ├── database/
-│   ├── postgresql/
+│   ├── postgres/
 │   │   ├── migrations/
-│   │   ├── seeds/
-│   │   └── README.md
-│   │
-│   └── mongodb/
-│       ├── indexes/
-│       ├── seeds/
-│       └── README.md
+│   │   └── seed/
+│   ├── mongo/
+│   │   ├── schemas/
+│   │   └── seed/
+│   ├── scripts/
+│   ├── docs/
+│   ├── docker-compose.yml
+│   ├── Makefile
+│   ├── README.md
+│   └── CLAUDE.md
 │
 ├── docker/
 │   ├── docker-compose.yml
 │   ├── docker-compose.dev.yml
+│   ├── docs/
+│   ├── Makefile
 │   └── README.md
 │
 ├── k8s/
@@ -67,32 +73,59 @@ codementor-infra/
 │   │   ├── development/
 │   │   ├── staging/
 │   │   └── production/
-│   └── README.md
+│   ├── docs/
+│   ├── Makefile
+│   ├── README.md
+│   └── CLAUDE.md
 │
 ├── cicd/
 │   ├── workflows/
+│   ├── docs/
+│   ├── Makefile
 │   └── README.md
 │
 ├── monitoring/
 │   ├── dashboards/
 │   ├── alerts/
+│   ├── docs/
+│   ├── Makefile
 │   └── README.md
 │
 ├── scripts/
 │   ├── setup/
-│   ├── database/
-│   └── deployment/
+│   ├── deployment/
+│   ├── Makefile
+│   └── README.md
 │
-├── docs/
-│   ├── architecture/
-│   ├── database/
-│   └── operations/
-│
+├── Makefile
+├── CLAUDE.md
 ├── .env.example
 └── README.md
 ```
 
 Some directories may initially contain only documentation or configuration placeholders. They are intentionally separated to provide a consistent structure as the project grows.
+
+Conventions for every top-level area:
+
+* `Makefile` — the area's own tasks. The root `Makefile` only dispatches to these.
+* `README.md` — required. What the area is and how to run it.
+* `docs/` — documentation belonging to that area. There is no shared root `docs/`.
+* `CLAUDE.md` — optional. Add it only when the area's tasks become complex enough that an agent needs rules beyond the README (as with `database/`); skip it while the area is still simple.
+
+---
+
+# Task Orchestration
+
+The root `Makefile` does no work itself. It discovers every `*/Makefile` and dispatches to it:
+
+```bash
+make help                # available targets and discovered areas
+make database            # show the database area's own help
+make database/psql       # run one target in one area
+make up                  # broadcast: run "up" in every area that defines it
+```
+
+Broadcast targets are `up`, `down`, `init`, `seed`, `verify`, and `reset`. Areas that do not define a target are skipped. A new area needs no root change — adding its `Makefile` is enough.
 
 ---
 
@@ -122,10 +155,10 @@ Typical domains include:
 Structure:
 
 ```text
-database/postgresql/
+database/postgres/
 ├── migrations/
-├── seeds/
-└── README.md
+├── seed/
+└── verify.sql
 ```
 
 PostgreSQL is responsible for relational integrity through:
@@ -159,10 +192,10 @@ Typical exercise data includes:
 Structure:
 
 ```text
-database/mongodb/
-├── indexes/
-├── seeds/
-└── README.md
+database/mongo/
+├── schemas/
+├── seed/
+└── init.js
 ```
 
 MongoDB is intentionally separated from PostgreSQL so flexible exercise content does not unnecessarily complicate the relational model.
@@ -361,25 +394,21 @@ Monitoring configuration should be added as the runtime infrastructure becomes a
 
 # Scripts
 
-The `scripts/` directory contains reusable infrastructure utilities.
+The `scripts/` directory contains cross-area infrastructure utilities. Scripts that belong to a single area live with that area instead — database initialization, for example, lives in `database/scripts/`.
 
 Example:
 
 ```text
 scripts/
 ├── setup/
-├── database/
 └── deployment/
 ```
 
 Possible responsibilities:
 
 * Local environment setup
-* Database initialization
-* Database reset
-* Seed execution
-* Migration utilities
 * Deployment helpers
+* Environment promotion utilities
 
 Scripts should be deterministic and safe to execute repeatedly where possible.
 
@@ -387,14 +416,17 @@ Scripts should be deterministic and safe to execute repeatedly where possible.
 
 # Documentation
 
-The `docs/` directory contains infrastructure-specific documentation.
+Documentation lives inside the area it describes, in that area's `docs/` directory:
 
 ```text
-docs/
-├── architecture/
-├── database/
-└── operations/
+database/docs/
+docker/docs/
+k8s/docs/
+cicd/docs/
+monitoring/docs/
 ```
+
+This keeps documentation next to the configuration it explains, so an area stays self-contained instead of splitting across a shared root directory.
 
 Documentation may include:
 
@@ -406,7 +438,7 @@ Documentation may include:
 * Operational procedures
 * Troubleshooting guides
 
-Infrastructure decisions that are not obvious from configuration should be documented here.
+Infrastructure decisions that are not obvious from configuration should be documented in the relevant area's `docs/`.
 
 ---
 
@@ -575,7 +607,7 @@ A typical development workflow is:
 7. Start CodeMentor services
 ```
 
-The exact commands will be documented in the relevant directory README files as each infrastructure component is implemented.
+Steps 3–6 are driven from the root `Makefile` (`make up`, `make init`, `make seed`, `make verify`). The exact commands for each area are documented in that area's `README.md` as it is implemented.
 
 ---
 

@@ -29,7 +29,7 @@ Phần này để đối chiếu khi vẽ lại trong Visual Paradigm — cũng 
 ### 1.2 Nguyên tắc đã áp dụng
 
 1. **`«include»` chỉ dùng khi thật sự bắt buộc.** Ví dụ *Kiểm tra điều kiện mở khoá* luôn chạy khi
-   mở bài học → include. Còn *Tìm kiếm* thì duyệt danh sách không cần tìm vẫn chạy được → **extend**.
+   mở bài học → include. Còn *Tìm kiếm* thì xem danh sách không cần tìm vẫn chạy được → **extend**.
 2. **Mỗi `«extend»` phải có điều kiện (guard) và điểm mở rộng (extension point).** Không ghi điều
    kiện thì không phải extend.
 3. **Không tách CRUD thành 4 use case.** *Quản lý thành viên* là một use case với nhiều luồng, không
@@ -52,7 +52,7 @@ Phần này để đối chiếu khi vẽ lại trong Visual Paradigm — cũng 
 | Nhóm học tập | P6 | 12 | Thành viên nhóm, Quản lý nhóm |
 | Trợ lý AI | P7 | 5 | Học viên |
 | Quản trị hệ thống | P8 | 6 | Quản trị viên |
-| Tác vụ tự động | P9 | 3 | Bộ định thời |
+| Tác vụ tự động | P9 | 3 | Hệ thống hẹn giờ |
 | | | **70** | |
 
 <!-- diagram:package-overview -->
@@ -166,8 +166,8 @@ left to right direction
 actor "Học viên" as Learner
 
 rectangle "CodeMentor" {
-  usecase "UC-10\nDuyệt lộ trình học" as UC10
-  usecase "UC-11\nDuyệt & tìm khoá học" as UC11
+  usecase "UC-10\nXem danh sách lộ trình học" as UC10
+  usecase "UC-11\nXem & tìm khoá học" as UC11
   usecase "UC-12\nLọc và tìm kiếm" as UC12
   usecase "UC-13\nXem chi tiết lộ trình" as UC13
   usecase "UC-14\nXem chi tiết khoá học" as UC14
@@ -197,8 +197,8 @@ UC15 --> AI
 
 | Mã | Use case | Actor | Quan hệ | Dữ liệu |
 | --- | --- | --- | --- | --- |
-| UC-10 | Duyệt lộ trình học | Học viên | | `roadmaps` |
-| UC-11 | Duyệt & tìm khoá học | Học viên | | `courses` |
+| UC-10 | Xem danh sách lộ trình học | Học viên | | `roadmaps` |
+| UC-11 | Xem & tìm khoá học | Học viên | | `courses` |
 | UC-12 | Lọc và tìm kiếm | Học viên | «extend» UC-10, UC-11 — *đk: nhập từ khoá hoặc chọn bộ lọc* | `technologies`, `tags` |
 | UC-13 | Xem chi tiết lộ trình | Học viên | | `roadmap_courses`, `roadmap_outcomes` |
 | UC-14 | Xem chi tiết khoá học | Học viên | | `chapters`, `lessons`, `course_reviews` |
@@ -279,7 +279,7 @@ left to right direction
 actor "Học viên" as Learner
 
 rectangle "CodeMentor" {
-  usecase "UC-30\nDuyệt danh sách bài tập" as UC30
+  usecase "UC-30\nXem danh sách bài tập" as UC30
   usecase "UC-31\nChọn chế độ luyện tập\n(ràng buộc / tự do)" as UC31
   usecase "UC-32\nKiểm tra điều kiện mở bài tập" as UC32
   usecase "UC-33\nGiải bài trong workspace" as UC33
@@ -319,7 +319,7 @@ UC38 --> AI
 
 | Mã | Use case | Quan hệ | Dữ liệu / hiện thực |
 | --- | --- | --- | --- |
-| UC-30 | Duyệt danh sách bài tập | | `exercises`, `exercise_set_items` |
+| UC-30 | Xem danh sách bài tập | | `exercises`, `exercise_set_items` |
 | UC-31 | Chọn chế độ luyện tập | «extend» UC-32 — *đk: học viên đổi chế độ* | `exercise_set_enrollments.progression_mode_override` |
 | UC-32 | **Kiểm tra điều kiện mở bài tập** | *(included)* | `fn_exercise_available(user, set, exercise)` |
 | UC-33 | Giải bài trong workspace | «include» UC-32 | Mongo `exercise_contents` |
@@ -595,7 +595,7 @@ UC83 --> AI
 ```plantuml
 @startuml p9-scheduled
 left to right direction
-actor "Bộ định thời" as Timer <<system>>
+actor "Hệ thống hẹn giờ" as Timer <<system>>
 
 rectangle "CodeMentor" {
   usecase "UC-90\nGửi nhắc học theo lịch" as UC90

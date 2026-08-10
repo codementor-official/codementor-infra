@@ -24,7 +24,7 @@ Không khởi xướng gì — hệ thống gọi tới để hoàn thành use c
 | S1 | **Dịch vụ AI** | Hỏi đáp, phân tích lỗi, tiền kiểm tài liệu, sinh nháp bài tập | `ai_verdict`, `exercises.source='ai'` |
 | S2 | **Hệ thống chấm bài** | Chạy thử, nộp bài | `submissions.verdict/runtime_ms/memory_kb`, `submission_run_details` |
 | S3 | **Dịch vụ thông báo** | Xác thực email, nhắc học, nhắc hạn nộp | `users.email_verified_at`, `reminders_enabled` |
-| S4 | **Bộ định thời** («Time») | Kích hoạt tác vụ theo lịch | `study_schedule_slots`, `group_exercises.due_at` |
+| S4 | **Hệ thống hẹn giờ** («Time») | Kích hoạt tác vụ theo lịch | `study_schedule_slots`, `group_exercises.due_at` |
 
 ## 2. Sơ đồ kế thừa
 
@@ -52,7 +52,7 @@ package "Actor hệ thống" {
   actor "Dịch vụ AI" as AI <<system>>
   actor "Hệ thống chấm bài" as Judge <<system>>
   actor "Dịch vụ thông báo" as Notify <<system>>
-  actor "Bộ định thời" as Timer <<system>>
+  actor "Hệ thống hẹn giờ" as Timer <<system>>
 }
 
 note bottom of GManager
@@ -136,4 +136,4 @@ Ba việc chỉ Trưởng nhóm làm được (phân quyền, chuyển quyền s
 | **Khách** | `/`, `/login`, `/signup` — thiếu thì use case *Đăng ký / Đăng nhập* không thuộc về ai |
 | **Hệ thống chấm bài** | `submissions.verdict/runtime_ms/memory_kb`, `exercises.time_limit_ms`, `submission_run_details.judge{worker,imageTag}` — thiếu thì không giải thích được ai sinh ra verdict |
 | **Dịch vụ thông báo** | `users.email_verified_at`, `reminders_enabled/reminder_time` |
-| **Bộ định thời** | `study_schedule_slots(weekday, start_time)` + index `idx_study_schedule_due` — nhắc học là use case **kích hoạt bởi thời gian**, không do người dùng bấm |
+| **Hệ thống hẹn giờ** | `study_schedule_slots(weekday, start_time)` + index `idx_study_schedule_due` — nhắc học là use case **kích hoạt bởi thời gian**, không do người dùng bấm |

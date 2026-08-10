@@ -260,12 +260,12 @@ Hiện thực trực tiếp yêu cầu *"hỗ trợ cả học tuần tự lẫn
 | E1 | Tự tham chiếu (A→A) | CHECK `*_no_self_reference` | `23514` |
 | E2 | Cạnh trùng | PRIMARY KEY | `23505` |
 | E3 | **Chu trình trực tiếp** (A→B rồi B→A) | trigger `fn_prevent_dependency_cycle` | `23514` |
-| E4 | **Chu trình gián tiếp** (A→B→C→A) | cùng trigger, duyệt đệ quy | `23514` |
+| E4 | **Chu trình gián tiếp** (A→B→C→A) | cùng trigger, lần theo đệ quy | `23514` |
 | E5 | Khác phạm vi (bài của khoá khác) | FOREIGN KEY tổ hợp | `23503` |
 | E6 | Đối tượng không tồn tại | FOREIGN KEY | `23503` |
 | E7 | Trỏ tới nội dung đã lưu trữ | trigger `fn_reject_archived_*` | `23514` |
 
-**Cách phát hiện chu trình:** trước khi thêm *"S phải trước T"*, duyệt xuôi từ **T** xem có tới
+**Cách phát hiện chu trình:** trước khi thêm *"S phải trước T"*, lần theo cạnh xuôi từ **T** xem có tới
 được **S** không. Nếu có thì cạnh mới khép vòng. Dùng `UNION` (không phải `UNION ALL`) nên dữ
 liệu lỗi sẵn có cũng không làm treo.
 

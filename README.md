@@ -38,6 +38,9 @@ docs/
   03-mongodb-model.md       collections, document shapes, embedded-vs-referenced, indexes
   04-design-decisions.md    trade-offs and their costs
   05-schema-reference.md    every table, column, constraint and FK — GENERATED, do not hand-edit
+  06-actors.md              actor catalog + generalisation hierarchy (tiếng Việt)
+  07-use-case-model.md      use case diagrams per package, include/extend, traceability (tiếng Việt)
+  08-use-case-specifications.md   detailed flows for 8 key use cases (tiếng Việt)
 
 postgres/
   migrations/0001…0013.sql  ordered, transactional, run top to bottom on an empty database

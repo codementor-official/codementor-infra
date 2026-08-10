@@ -326,7 +326,7 @@ Kiểm chứng: `postgres/verify.sql` mục C — cả 7 trường hợp đều 
 
 | | |
 | --- | --- |
-| **Actor chính** | Phó nhóm *(hoặc Trưởng nhóm qua kế thừa)* |
+| **Actor chính** | Quản lý nhóm |
 | **Tiền điều kiện** | **Quyền `reviewSubmission` = true**; tồn tại bản nộp |
 | **Hậu điều kiện** | `assignments.review_status` khác `pending`; có `reviewed_by`, `reviewed_at` |
 
@@ -354,7 +354,7 @@ Kiểm chứng: `postgres/verify.sql` mục C — cả 7 trường hợp đều 
 | --- | --- | --- |
 | BR-70 | `review_status='pending'` ⟺ `reviewed_at IS NULL` | CHECK `assignments_reviewed_consistency` |
 | BR-71 | Bài nộp và người chấm phải cùng nhóm | FK tổ hợp `assignments_member_in_group` |
-| BR-72 | Trưởng nhóm luôn có mọi quyền | không lưu trong `group_role_permissions`; bộ phân giải mặc định `true` |
+| BR-72 | Người có `role='owner'` luôn có mọi quyền | không lưu trong `group_role_permissions`; bộ phân giải mặc định `true` |
 
 ---
 

@@ -43,12 +43,12 @@ Phần này để đối chiếu khi vẽ lại trong Visual Paradigm — cũng 
 
 | Gói | Mã | Số UC | Actor chính |
 | --- | --- | --- | --- |
-| Quản lý tài khoản & cá nhân hoá | P1 | 8 | Khách, Người dùng, Học viên |
+| Quản lý tài khoản & cá nhân hoá | P1 | 8 | Khách, Học viên |
 | Khám phá & Lộ trình học | P2 | 7 | Học viên |
 | Học tập | P3 | 8 | Học viên |
 | Luyện tập & Chấm bài | P4 | 11 | Học viên |
 | Soạn & Quản lý nội dung | P5 | 10 | Quản trị viên, Học viên |
-| Nhóm học tập | P6 | 12 | Thành viên / Phó / Trưởng nhóm |
+| Nhóm học tập | P6 | 12 | Thành viên nhóm, Quản lý nhóm |
 | Trợ lý AI | P7 | 5 | Học viên |
 | Quản trị hệ thống | P8 | 6 | Quản trị viên |
 | Tác vụ tự động | P9 | 3 | Bộ định thời |
@@ -90,9 +90,7 @@ left to right direction
 skinparam actorStyle awesome
 
 actor "Khách" as Guest
-actor "Người dùng" as User
 actor "Học viên" as Learner
-User <|-- Learner
 
 rectangle "CodeMentor" {
   usecase "UC-01\nĐăng ký tài khoản" as UC01
@@ -114,8 +112,8 @@ actor "Dịch vụ thông báo" as Notify <<system>>
 Guest --> UC01
 Guest --> UC02
 Guest --> UC03
-User  --> UC05
-User  --> UC08
+Learner --> UC05
+Learner --> UC08
 Learner --> UC06
 Learner --> UC07
 
@@ -129,10 +127,10 @@ UC04 --> Notify
 | UC-02 | Đăng nhập | Khách | `users.password_hash` |
 | UC-03 | Khôi phục mật khẩu | Khách | «include» UC-04 |
 | UC-04 | Xác thực email | *(included)* | `users.email_verified_at`; gọi Dịch vụ thông báo |
-| UC-05 | Quản lý hồ sơ cá nhân | Người dùng | `users.display_name/bio/avatar_url/handle` |
+| UC-05 | Quản lý hồ sơ cá nhân | Học viên | `users.display_name/bio/avatar_url/handle` |
 | UC-06 | Hoàn thành khảo sát học tập | Học viên | `learning_preferences` — đầu vào cho gợi ý |
 | UC-07 | Cấu hình lịch học & nhắc nhở | Học viên | `study_schedule_slots`, `reminders_enabled` |
-| UC-08 | Tuỳ chỉnh giao diện | Người dùng | theme (client-side) |
+| UC-08 | Tuỳ chỉnh giao diện | Học viên | theme (client-side) |
 
 **Điểm mở rộng** — UC-07 *mở rộng* UC-06 tại điểm "sau khi lưu khảo sát", điều kiện `remindersEnabled = true`.
 
@@ -365,10 +363,8 @@ left to right direction
 
 actor "Học viên" as Learner
 actor "Thành viên nhóm" as GMember
-actor "Phó nhóm" as GDeputy
-actor "Trưởng nhóm" as GOwner
-GMember <|-- GDeputy
-GDeputy <|-- GOwner
+actor "Quản lý nhóm" as GManager
+GMember <|-- GManager
 
 rectangle "CodeMentor" {
   usecase "UC-50\nTạo nhóm học tập" as UC50
@@ -399,33 +395,38 @@ Learner  --> UC51
 GMember  --> UC52
 GMember  --> UC53
 GMember  --> UC57
-GDeputy  --> UC55
-GDeputy  --> UC56
-GDeputy  --> UC58
-GOwner   --> UC59
-GOwner   --> UC5A
+GManager --> UC55
+GManager --> UC56
+GManager --> UC58
+GManager --> UC59
+GManager --> UC5A
 UC54 --> AI
 @enduml
 ```
 
 | Mã | Use case | Actor | Quan hệ | Dữ liệu |
 | --- | --- | --- | --- | --- |
-| UC-50 | Tạo nhóm học tập | Học viên → thành Trưởng nhóm | | `study_groups`, `group_members(role='owner')` |
+| UC-50 | Tạo nhóm học tập | Học viên → thành Quản lý nhóm | | `study_groups`, `group_members(role='owner')` |
 | UC-51 | Tham gia nhóm bằng mã mời | Học viên | | `study_groups.invite_code` |
 | UC-52 | Xem tổng quan nhóm | Thành viên | | `member_count`, `submissionTrend` |
 | UC-53 | Tải tài liệu lên nhóm | Thành viên¹ | «include» UC-54, UC-5B | `group_documents` |
 | UC-54 | **Tiền kiểm tài liệu bằng AI** | *(included)* | | `group_documents.ai_verdict` |
-| UC-55 | Duyệt tài liệu nhóm | Phó nhóm¹ | | `document_status`, `reviewed_by` |
-| UC-56 | Giao bài tập cho nhóm | Phó nhóm¹ | «include» UC-5B | `group_exercises`, `assignments` |
+| UC-55 | Duyệt tài liệu nhóm | Quản lý nhóm¹ | | `document_status`, `reviewed_by` |
+| UC-56 | Giao bài tập cho nhóm | Quản lý nhóm¹ | «include» UC-5B | `group_exercises`, `assignments` |
 | UC-57 | Nộp bài được giao | Thành viên | «include» UC-5B | `submissions.assignment_id` |
-| UC-58 | Chấm & phản hồi bài nộp | Phó nhóm¹ | | `assignments.review_status/feedback` |
-| UC-59 | Quản lý thành viên | Trưởng nhóm | «include» UC-5B | `group_members` |
-| UC-5A | Phân quyền thành viên | Trưởng nhóm | «extend» UC-59 | `group_role_permissions` + `group_member_permissions` |
+| UC-58 | Chấm & phản hồi bài nộp | Quản lý nhóm¹ | | `assignments.review_status/feedback` |
+| UC-59 | Quản lý thành viên | Quản lý nhóm² | «include» UC-5B | `group_members` |
+| UC-5A | Phân quyền thành viên | Quản lý nhóm² | «extend» UC-59 | `group_role_permissions` + `group_member_permissions` |
 | UC-5B | **Ghi nhận hoạt động nhóm** | *(included)* | | `group_activities` |
 
 ¹ **Tiền điều kiện là quyền, không phải actor.** UC-53 gắn với `Thành viên nhóm` nhưng chỉ chạy
-được khi `effectiveMemberPermissions(member).uploadDoc = true`. Một phó nhóm bị gỡ quyền
-`deleteDoc` vẫn là phó nhóm. Xem [`06-actors.md §2`](06-actors.md).
+được khi `effectiveMemberPermissions(member).uploadDoc = true`. Một người bị gỡ quyền `deleteDoc`
+vẫn giữ nguyên vai trò của mình. Xem [`06-actors.md §3`](06-actors.md).
+
+² **Chỉ Trưởng nhóm** — tiền điều kiện `group_members.role = 'owner'`. Đây là lý do
+`Trưởng nhóm` không cần là actor riêng: khác biệt duy nhất so với Phó nhóm nằm ở tiền điều kiện
+của ba use case, không phải ở mục tiêu hay tập chức năng. Ràng buộc *mỗi nhóm đúng một trưởng nhóm*
+do CSDL cưỡng chế bằng `uq_group_members_single_owner`.
 
 ---
 

@@ -4,7 +4,8 @@ Xây dựng từ [`06-actors.md`](06-actors.md), đối chiếu với route th�
 đã triển khai. Mọi use case dưới đây đều truy được về một màn hình hoặc một bảng dữ liệu có thật —
 không có use case "vẽ cho đẹp".
 
-Sơ đồ viết bằng **PlantUML** (Visual Paradigm import được, hoặc render tại plantuml.com).
+Sơ đồ đã được **render sẵn ra SVG** nên hiển thị được ở mọi nơi (VSCode, GitHub, Word, PDF).
+Mã nguồn PlantUML nằm trong khối `<details>` dưới mỗi hình — sửa xong chạy `node scripts/render-diagrams.js`.
 Mermaid **không hỗ trợ** use case diagram nên không dùng ở đây.
 
 ---
@@ -54,6 +55,11 @@ Phần này để đối chiếu khi vẽ lại trong Visual Paradigm — cũng 
 | Tác vụ tự động | P9 | 3 | Bộ định thời |
 | | | **70** | |
 
+<!-- diagram:package-overview -->
+![Tổng quan các gói chức năng](diagrams/package-overview.svg)
+
+<details><summary>Mã nguồn PlantUML — sửa ở đây rồi chạy <code>node scripts/render-diagrams.js</code></summary>
+
 ```plantuml
 @startuml package-overview
 skinparam packageStyle rectangle
@@ -80,9 +86,17 @@ P9 ..> P1 : nhắc theo lịch
 @enduml
 ```
 
+</details>
+<!-- /diagram:package-overview -->
+
 ---
 
 ## 3. P1 — Quản lý tài khoản & cá nhân hoá
+
+<!-- diagram:p1-account -->
+![P1 — Quản lý tài khoản & cá nhân hoá](diagrams/p1-account.svg)
+
+<details><summary>Mã nguồn PlantUML — sửa ở đây rồi chạy <code>node scripts/render-diagrams.js</code></summary>
 
 ```plantuml
 @startuml p1-account
@@ -121,6 +135,9 @@ UC04 --> Notify
 @enduml
 ```
 
+</details>
+<!-- /diagram:p1-account -->
+
 | Mã | Use case | Actor | Ghi chú / dữ liệu |
 | --- | --- | --- | --- |
 | UC-01 | Đăng ký tài khoản | Khách | `users`; «include» UC-04 |
@@ -137,6 +154,11 @@ UC04 --> Notify
 ---
 
 ## 4. P2 — Khám phá & Lộ trình học
+
+<!-- diagram:p2-discovery -->
+![P2 — Khám phá & Lộ trình học](diagrams/p2-discovery.svg)
+
+<details><summary>Mã nguồn PlantUML — sửa ở đây rồi chạy <code>node scripts/render-diagrams.js</code></summary>
 
 ```plantuml
 @startuml p2-discovery
@@ -170,6 +192,9 @@ UC15 --> AI
 @enduml
 ```
 
+</details>
+<!-- /diagram:p2-discovery -->
+
 | Mã | Use case | Actor | Quan hệ | Dữ liệu |
 | --- | --- | --- | --- | --- |
 | UC-10 | Duyệt lộ trình học | Học viên | | `roadmaps` |
@@ -186,6 +211,11 @@ UC15 --> AI
 ---
 
 ## 5. P3 — Học tập
+
+<!-- diagram:p3-learning -->
+![P3 — Học tập](diagrams/p3-learning.svg)
+
+<details><summary>Mã nguồn PlantUML — sửa ở đây rồi chạy <code>node scripts/render-diagrams.js</code></summary>
 
 ```plantuml
 @startuml p3-learning
@@ -216,6 +246,9 @@ Learner --> UC27
 @enduml
 ```
 
+</details>
+<!-- /diagram:p3-learning -->
+
 | Mã | Use case | Quan hệ | Dữ liệu / hiện thực |
 | --- | --- | --- | --- |
 | UC-20 | Học bài (mở lesson) | «include» UC-21 | `lessons`, Mongo `lesson_contents` |
@@ -234,6 +267,11 @@ không nhân bản nội dung.
 ---
 
 ## 6. P4 — Luyện tập & Chấm bài
+
+<!-- diagram:p4-practice -->
+![P4 — Luyện tập & Chấm bài](diagrams/p4-practice.svg)
+
+<details><summary>Mã nguồn PlantUML — sửa ở đây rồi chạy <code>node scripts/render-diagrams.js</code></summary>
 
 ```plantuml
 @startuml p4-practice
@@ -276,6 +314,9 @@ UC38 --> AI
 @enduml
 ```
 
+</details>
+<!-- /diagram:p4-practice -->
+
 | Mã | Use case | Quan hệ | Dữ liệu / hiện thực |
 | --- | --- | --- | --- |
 | UC-30 | Duyệt danh sách bài tập | | `exercises`, `exercise_set_items` |
@@ -297,6 +338,11 @@ UC38 --> AI
 Nội dung **chính thống** (lộ trình, khoá học, chương, bài học, bài tập catalog) do **Quản trị viên**
 phụ trách. **Học viên** chỉ soạn được bài tập **phạm vi nhóm** — phân biệt bằng tiền điều kiện
 `exercises.owner_group_id`, không phải bằng loại actor. Xem [`06-actors.md §3`](06-actors.md).
+
+<!-- diagram:p5-authoring -->
+![P5 — Soạn & Quản lý nội dung](diagrams/p5-authoring.svg)
+
+<details><summary>Mã nguồn PlantUML — sửa ở đây rồi chạy <code>node scripts/render-diagrams.js</code></summary>
 
 ```plantuml
 @startuml p5-authoring
@@ -337,6 +383,9 @@ UC43 --> AI
 @enduml
 ```
 
+</details>
+<!-- /diagram:p5-authoring -->
+
 | Mã | Use case | Actor | Quan hệ | Dữ liệu |
 | --- | --- | --- | --- | --- |
 | UC-40 | Soạn bài tập code | Quản trị viên, Học viên¹ | «include» UC-42 | `exercises`, Mongo `exercise_contents` |
@@ -356,6 +405,11 @@ UC43 --> AI
 ---
 
 ## 8. P6 — Nhóm học tập
+
+<!-- diagram:p6-groups -->
+![P6 — Nhóm học tập](diagrams/p6-groups.svg)
+
+<details><summary>Mã nguồn PlantUML — sửa ở đây rồi chạy <code>node scripts/render-diagrams.js</code></summary>
 
 ```plantuml
 @startuml p6-groups
@@ -404,6 +458,9 @@ UC54 --> AI
 @enduml
 ```
 
+</details>
+<!-- /diagram:p6-groups -->
+
 | Mã | Use case | Actor | Quan hệ | Dữ liệu |
 | --- | --- | --- | --- | --- |
 | UC-50 | Tạo nhóm học tập | Học viên → thành Quản lý nhóm | | `study_groups`, `group_members(role='owner')` |
@@ -435,6 +492,11 @@ do CSDL cưỡng chế bằng `uq_group_members_single_owner`.
 Ở đây dùng **generalization giữa các use case**: bốn kịch bản là các dạng chuyên biệt của một
 tương tác chung, chứ không phải bốn use case rời rạc.
 
+<!-- diagram:p7-ai -->
+![P7 — Trợ lý AI](diagrams/p7-ai.svg)
+
+<details><summary>Mã nguồn PlantUML — sửa ở đây rồi chạy <code>node scripts/render-diagrams.js</code></summary>
+
 ```plantuml
 @startuml p7-ai
 left to right direction
@@ -460,6 +522,9 @@ UC70 --> AI
 @enduml
 ```
 
+</details>
+<!-- /diagram:p7-ai -->
+
 | Mã | Use case | Nguồn trong frontend |
 | --- | --- | --- |
 | UC-70 | Tương tác với trợ lý AI *(cha)* | `/ai-tutor` |
@@ -473,6 +538,11 @@ UC-72 cũng là điểm mở rộng của UC-35 (Nộp bài) khi `verdict <> 'ac
 ---
 
 ## 10. P8 — Quản trị hệ thống
+
+<!-- diagram:p8-admin -->
+![P8 — Quản trị hệ thống](diagrams/p8-admin.svg)
+
+<details><summary>Mã nguồn PlantUML — sửa ở đây rồi chạy <code>node scripts/render-diagrams.js</code></summary>
 
 ```plantuml
 @startuml p8-admin
@@ -501,6 +571,9 @@ UC83 --> AI
 @enduml
 ```
 
+</details>
+<!-- /diagram:p8-admin -->
+
 | Mã | Use case | Quan hệ | Dữ liệu |
 | --- | --- | --- | --- |
 | UC-80 | Quản lý người dùng | | `users.role/status` |
@@ -513,6 +586,11 @@ UC83 --> AI
 ---
 
 ## 11. P9 — Tác vụ tự động (kích hoạt bởi thời gian)
+
+<!-- diagram:p9-scheduled -->
+![P9 — Tác vụ tự động](diagrams/p9-scheduled.svg)
+
+<details><summary>Mã nguồn PlantUML — sửa ở đây rồi chạy <code>node scripts/render-diagrams.js</code></summary>
 
 ```plantuml
 @startuml p9-scheduled
@@ -534,6 +612,9 @@ UC90 --> Notify
 UC91 --> Notify
 @enduml
 ```
+
+</details>
+<!-- /diagram:p9-scheduled -->
 
 | Mã | Use case | Dữ liệu |
 | --- | --- | --- |

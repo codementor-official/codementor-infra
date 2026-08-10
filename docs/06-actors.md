@@ -28,6 +28,11 @@ Không khởi xướng gì — hệ thống gọi tới để hoàn thành use c
 
 ## 2. Sơ đồ kế thừa
 
+<!-- diagram:actor-hierarchy -->
+![Sơ đồ kế thừa actor](diagrams/actor-hierarchy.svg)
+
+<details><summary>Mã nguồn PlantUML — sửa ở đây rồi chạy <code>node scripts/render-diagrams.js</code></summary>
+
 ```plantuml
 @startuml actor-hierarchy
 skinparam actorStyle awesome
@@ -57,6 +62,9 @@ note bottom of GManager
 end note
 @enduml
 ```
+
+</details>
+<!-- /diagram:actor-hierarchy -->
 
 `Quản trị viên ⊳ Học viên` là có chủ ý: tài khoản quản trị vẫn học được, nên thừa hưởng toàn bộ
 use case của học viên thay vì phải nối lại từ đầu.

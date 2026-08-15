@@ -1,0 +1,9 @@
+# Environment-specific secrets
+**/.env
+!**/.env.example
+
+# Local deployment artifacts
+*.pem
+*.key
+*.log
+*.tar.gz

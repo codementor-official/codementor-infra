@@ -116,7 +116,7 @@ The frontend has no user type. Fields are scattered across components:
 | memory/auth | email |
 
 ADD: `email` (unique, required), `password_hash`, `email_verified_at`, `avatar_url`, `locale`,
-`timezone`, `status`, `role` (platform-level: learner/mentor/admin — `/admin` route exists),
+`timezone`, `status`, `role` (platform-level: learner/lecturer/admin — `/admin` route exists),
 `created_at`. `initials` is DROP (derivable). `lastActiveMinutesAgo` → `last_active_at timestamptz`
 (a relative number cannot be stored). `xp`/`solvedCount`/`streakDays` are CACHE.
 

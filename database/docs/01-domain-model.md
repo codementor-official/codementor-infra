@@ -33,7 +33,7 @@ erDiagram
         text avatar_url
         text website_url
         text github_handle
-        platform_role role "learner|mentor|admin"
+        platform_role role "learner|lecturer|admin"
         account_status status "active|suspended|deleted"
         timestamptz email_verified_at
         timestamptz last_active_at

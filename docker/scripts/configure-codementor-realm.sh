@@ -139,7 +139,7 @@ fi
 kc update "realms/$realm" \
   -s enabled=true \
   -s sslRequired=NONE \
-  -s registrationAllowed=true \
+  -s registrationAllowed=false \
   -s registrationEmailAsUsername=true \
   -s loginWithEmailAllowed=true \
   -s duplicateEmailsAllowed=false \

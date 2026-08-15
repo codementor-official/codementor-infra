@@ -138,6 +138,7 @@ fi
 
 kc update "realms/$realm" \
   -s enabled=true \
+  -s loginTheme=codementor \
   -s sslRequired=NONE \
   -s registrationAllowed=false \
   -s registrationEmailAsUsername=true \

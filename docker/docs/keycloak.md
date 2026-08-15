@@ -1,5 +1,7 @@
 # Keycloak DEV authentication
 
+The `codementor` login theme is mounted from `docker/keycloak/themes/codementor` and selected by the idempotent realm configuration script. It keeps credentials inside Keycloak while matching the CodeMentor Admin visual language.
+
 `docker/scripts/configure-codementor-realm.sh` is the reproducible source of truth for the
 CodeMentor realm. It is safe to run again after configuration changes.
 

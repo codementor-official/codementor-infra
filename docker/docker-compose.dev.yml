@@ -74,6 +74,8 @@ services:
       JAVA_OPTS_KC_HEAP: -XX:InitialRAMPercentage=20 -XX:MaxRAMPercentage=60
     ports:
       - "0.0.0.0:${KEYCLOAK_HTTP_PORT:-8080}:8080"
+    volumes:
+      - ./keycloak/themes/codementor:/opt/keycloak/themes/codementor:ro
     depends_on:
       postgres:
         condition: service_healthy

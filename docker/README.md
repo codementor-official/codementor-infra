@@ -25,12 +25,16 @@ sudo docker compose --env-file docker/.env -f docker/docker-compose.dev.yml up -
 sudo bash docker/scripts/migrate-postgres.sh
 sudo bash docker/scripts/init-mongo.sh
 sudo bash docker/scripts/configure-keycloak-dev.sh
+sudo bash docker/scripts/configure-codementor-realm.sh
 sudo bash docker/scripts/verify-stack.sh
 ```
 
 The Keycloak configuration step sets `sslRequired=NONE` on the `master` realm so its admin
 console works over an EC2 IP address during development. Never apply this setting in production;
 use a stable hostname and TLS instead.
+
+Realm roles, OIDC clients, service accounts, DEV identities, and audience mapping are documented
+in [`docs/keycloak.md`](docs/keycloak.md).
 
 The bootstrap script installs Docker, verifies the Docker Compose binary checksum, enables
 Docker at boot, and creates a 2 GiB swap file when the host has no swap. The Compose stack

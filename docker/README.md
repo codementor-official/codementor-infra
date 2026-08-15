@@ -10,6 +10,10 @@ The databases bind to `127.0.0.1` on the host and are not publicly exposed. Keyc
 to port `8080` for development. Restrict the EC2 security-group ingress for `22` and `8080`
 to trusted developer IP addresses. Do not open PostgreSQL or MongoDB ports to the Internet.
 
+For direct access by EC2 public IP in a shared dev environment, set
+`POSTGRES_BIND_ADDRESS=0.0.0.0` and `MONGO_BIND_ADDRESS=0.0.0.0` only on the target host.
+Restrict security-group ingress for `5432` and `27017` to trusted developer IPs.
+
 ## First deployment on Amazon Linux 2023
 
 ```bash

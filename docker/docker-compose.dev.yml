@@ -14,7 +14,7 @@ services:
       KEYCLOAK_DB_NAME: ${KEYCLOAK_DB_NAME}
       LANG: C.UTF-8
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - codementor-pgdata:/var/lib/postgresql
       - ./postgres/init/00-create-keycloak-db.sh:/docker-entrypoint-initdb.d/00-create-keycloak-db.sh:ro
@@ -36,7 +36,7 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_DB}
     ports:
-      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+      - "${MONGO_BIND_ADDRESS:-127.0.0.1}:${MONGO_PORT:-27017}:27017"
     volumes:
       - codementor-mongodata:/data/db
     healthcheck:

@@ -1,0 +1,106 @@
+name: ${COMPOSE_PROJECT_NAME:-codementor-dev}
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: codementor-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      KEYCLOAK_DB_USER: ${KEYCLOAK_DB_USER}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KEYCLOAK_DB_NAME: ${KEYCLOAK_DB_NAME}
+      LANG: C.UTF-8
+    ports:
+      - "${POSTGRES_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - codementor-pgdata:/var/lib/postgresql
+      - ./postgres/init/00-create-keycloak-db.sh:/docker-entrypoint-initdb.d/00-create-keycloak-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 512m
+    networks:
+      - codementor-backend
+
+  mongo:
+    image: mongo:7
+    container_name: codementor-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB}
+    ports:
+      - "${MONGO_BIND_ADDRESS:-127.0.0.1}:${MONGO_PORT:-27017}:27017"
+    volumes:
+      - codementor-mongodata:/data/db
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet
+          "mongodb://${MONGO_USER}:${MONGO_PASSWORD}@localhost:27017/${MONGO_DB}?authSource=admin"
+          --eval "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)"
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 512m
+    networks:
+      - codementor-backend
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.0
+    container_name: codementor-keycloak
+    restart: unless-stopped
+    command:
+      - start
+      - --http-enabled=true
+      - --hostname-strict=false
+      - --proxy-headers=xforwarded
+      # Theme edits (login.css etc.) land on disk instantly via the bind mount below,
+      # but Keycloak caches parsed theme resources in memory by default and won't
+      # notice — without these, every CSS tweak needs a container restart to show up.
+      - --spi-theme-cache-themes=false
+      - --spi-theme-cache-templates=false
+      - --spi-theme-static-max-age=-1
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${KEYCLOAK_DB_NAME}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      KC_CACHE: local
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME}
+      JAVA_OPTS_KC_HEAP: -XX:InitialRAMPercentage=20 -XX:MaxRAMPercentage=60
+    ports:
+      # Bound to loopback only — Nginx on the host is the sole public entry point
+      # (id.codementor.cloud, HTTPS). Keeping this open would let anyone reach
+      # Keycloak directly over bare HTTP, bypassing TLS entirely.
+      - "127.0.0.1:${KEYCLOAK_HTTP_PORT:-8080}:8080"
+    volumes:
+      - ./keycloak/themes/codementor:/opt/keycloak/themes/codementor:ro
+      - ./keycloak/themes/codementor-lecturer:/opt/keycloak/themes/codementor-lecturer:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 768m
+    networks:
+      - codementor-backend
+
+networks:
+  codementor-backend:
+    name: codementor-backend
+
+volumes:
+  codementor-pgdata:
+    name: codementor-pgdata
+  codementor-mongodata:
+    name: codementor-mongodata

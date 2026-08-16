@@ -89,6 +89,29 @@ ensure_bearer_client() {
   fi
 }
 
+# The ONLY client in the realm allowed to use Direct Access Grant.
+#
+# apps/web renders its own username/password form, so the credentials reach Keycloak
+# through the Next.js BFF (`POST /api/auth/login`) instead of a browser redirect. That
+# needs the password grant — but a public client with the password grant enabled lets
+# anyone on the internet replay credentials against the realm with nothing but the
+# client id. Hence a separate CONFIDENTIAL client: the grant is useless without the
+# secret, and the secret never leaves the server.
+#
+# `standardFlowEnabled=false` on purpose — this client must never be usable for a
+# browser redirect flow. That stays with the public `codementor-web` client, which
+# keeps `directAccessGrantsEnabled=false`.
+ensure_bff_client() {
+  local id
+  id="$(client_id codementor-web-bff)"
+  if [ -z "$id" ]; then
+    id="$(kc create clients -r "$realm" -s clientId=codementor-web-bff -s 'name=CodeMentor Web BFF' -s enabled=true -s publicClient=false -s clientAuthenticatorType=client-secret -s serviceAccountsEnabled=false -s standardFlowEnabled=false -s directAccessGrantsEnabled=true -i)"
+  else
+    kc update "clients/$id" -r "$realm" -s 'name=CodeMentor Web BFF' -s enabled=true -s publicClient=false -s clientAuthenticatorType=client-secret -s serviceAccountsEnabled=false -s standardFlowEnabled=false -s directAccessGrantsEnabled=true >/dev/null
+  fi
+  printf '%s' "$id"
+}
+
 ensure_service_client() {
   local client="$1"
   local name="$2"
@@ -100,6 +123,52 @@ ensure_service_client() {
     kc update "clients/$id" -r "$realm" -s "name=$name" -s enabled=true -s publicClient=false -s clientAuthenticatorType=client-secret -s serviceAccountsEnabled=true -s standardFlowEnabled=false -s directAccessGrantsEnabled=false >/dev/null
   fi
   printf '%s' "$id"
+}
+
+
+# Google/Facebook OAuth apps. Both providers only ever hand back a confirmed email
+# through their basic `email` scope, so `trustEmail=true` is safe here — it lets
+# Keycloak's stock "first broker login" flow offer to LINK a matching existing
+# account (confirmed by the user re-entering their password) instead of either
+# silently merging or creating a second account. No custom auth flow needed; this
+# is Keycloak's default behavior once the IdP is marked as trusted.
+ensure_identity_provider() {
+  local alias="$1"
+  local provider_id="$2"
+  local client_id_var="$3"
+  local client_secret_var="$4"
+  # Optional extra `config.*` settings, e.g. Google's prompt behaviour.
+  shift 4
+  local client_id="${!client_id_var:-}"
+  local client_secret="${!client_secret_var:-}"
+  local extra=()
+  local setting
+  for setting in "$@"; do
+    extra+=(-s "$setting")
+  done
+  if [ -z "$client_id" ] || [ -z "$client_secret" ]; then
+    echo "skip identity provider '$alias': $client_id_var/$client_secret_var not set in .env"
+    return
+  fi
+  if kc get "identity-provider/instances/$alias" -r "$realm" >/dev/null 2>&1; then
+    kc update "identity-provider/instances/$alias" -r "$realm" \
+      -s enabled=true \
+      -s trustEmail=true \
+      -s storeToken=false \
+      -s "config.clientId=$client_id" \
+      -s "config.clientSecret=$client_secret" \
+      "${extra[@]}" >/dev/null
+  else
+    kc create identity-provider/instances -r "$realm" \
+      -s "alias=$alias" \
+      -s "providerId=$provider_id" \
+      -s enabled=true \
+      -s trustEmail=true \
+      -s storeToken=false \
+      -s "config.clientId=$client_id" \
+      -s "config.clientSecret=$client_secret" \
+      "${extra[@]}" >/dev/null
+  fi
 }
 
 ensure_audience_mapper() {
@@ -137,16 +206,24 @@ if ! kc get "realms/$realm" >/dev/null 2>&1; then
   kc create realms -s "realm=$realm" -s enabled=true -s 'displayName=CodeMentor' >/dev/null
 fi
 
+# `bruteForceProtected`: apps/web now sends passwords through its own BFF, so Keycloak
+# no longer sees a browser it can throttle by itself. Brute-force detection applies to
+# the password grant exactly as it does to the hosted login page, and it is the backstop
+# behind the per-IP limiter in the BFF route.
 kc update "realms/$realm" \
   -s enabled=true \
   -s loginTheme=codementor \
   -s sslRequired=EXTERNAL \
-  -s registrationAllowed=false \
+  -s registrationAllowed=true \
   -s registrationEmailAsUsername=true \
   -s loginWithEmailAllowed=true \
   -s duplicateEmailsAllowed=false \
   -s resetPasswordAllowed=true \
-  -s verifyEmail=false >/dev/null
+  -s verifyEmail=false \
+  -s bruteForceProtected=true \
+  -s internationalizationEnabled=true \
+  -s 'supportedLocales=["vi"]' \
+  -s defaultLocale=vi >/dev/null
 
 ensure_realm_role STUDENT 'CodeMentor student'
 ensure_realm_role LECTURER 'CodeMentor lecturer'
@@ -173,12 +250,24 @@ lecturer_redirects="${KEYCLOAK_LECTURER_REDIRECT_URIS:-[\"http://localhost:3010/
 lecturer_origins="${KEYCLOAK_LECTURER_WEB_ORIGINS:-[\"http://localhost:3010\",\"http://13.214.122.227:3010\"]}"
 lecturer_client_id="$(ensure_public_client codementor-lecturer 'CodeMentor Lecturer' "$lecturer_redirects" "$lecturer_origins" codementor-lecturer)"
 api_client_id="$(ensure_bearer_client)"
+web_bff_client_id="$(ensure_bff_client)"
 user_service_client_id="$(ensure_service_client codementor-user-service 'CodeMentor User Service')"
 ai_client_id="$(ensure_service_client codementor-ai-agent 'CodeMentor AI Agent')"
 
 ensure_audience_mapper "$admin_client_id"
 ensure_audience_mapper "$lecturer_client_id"
 ensure_audience_mapper "$ai_client_id"
+# Without this the password-grant token carries no `codementor-api` audience and every
+# backend call behind Kong rejects it — the login succeeds and the app still looks broken.
+ensure_audience_mapper "$web_bff_client_id"
+
+# `prompt=select_account`: after logging out of CodeMentor, clicking "Tiếp tục với
+# Google" must let the user pick an account. Without it Google silently reuses whichever
+# account is signed in to the browser, so logging out and back in as somebody else is
+# impossible without leaving Google entirely. Facebook's OAuth has no equivalent, hence
+# the setting only goes on Google.
+ensure_identity_provider google google GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET config.prompt=select_account
+ensure_identity_provider facebook facebook FACEBOOK_CLIENT_ID FACEBOOK_CLIENT_SECRET
 
 kc add-roles -r "$realm" --uusername service-account-codementor-ai-agent --rolename AI_AGENT >/dev/null 2>&1 || true
 for role in query-users view-users manage-users; do
@@ -187,8 +276,12 @@ done
 
 user_service_secret="$(kc get "clients/$user_service_client_id/client-secret" -r "$realm" --fields value --format csv --noquotes | tail -n 1)"
 ai_secret="$(kc get "clients/$ai_client_id/client-secret" -r "$realm" --fields value --format csv --noquotes | tail -n 1)"
+web_bff_secret="$(kc get "clients/$web_bff_client_id/client-secret" -r "$realm" --fields value --format csv --noquotes | tail -n 1)"
 upsert_env KEYCLOAK_USER_SERVICE_CLIENT_SECRET "$user_service_secret"
 upsert_env KEYCLOAK_AI_AGENT_CLIENT_SECRET "$ai_secret"
+# Copy into apps/web/.env.local as KEYCLOAK_BFF_CLIENT_SECRET. Server-side only — it
+# must never appear under a NEXT_PUBLIC_ name.
+upsert_env KEYCLOAK_WEB_BFF_CLIENT_SECRET "$web_bff_secret"
 
 ensure_secret_env KEYCLOAK_DEV_STUDENT_PASSWORD
 ensure_secret_env KEYCLOAK_DEV_LECTURER_PASSWORD

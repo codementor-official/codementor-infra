@@ -1,0 +1,321 @@
+/* Reproduces apps/web/src/components/auth-card.tsx as of commit b975182 (the
+ * mockup-based original, before it was simplified to a single redirect button).
+ * Tokens copied from apps/web/src/app/globals.css (light mode) — no build step
+ * here to import the real file, so keep these two in sync by hand. */
+:root {
+  color-scheme: light;
+  --cm-bg: #ffffff;
+  --cm-surface: #ffffff;
+  --cm-border: #e5e7eb;
+  --cm-navy: #18181b;
+  --cm-text-muted: #6b7280;
+  --cm-text-faint: #9ca3af;
+  --cm-primary: #ea580c;
+  --cm-primary-hover: #dc4f09;
+  --cm-accent-tint: #f3f4f6;
+  --cm-danger: #ea580c;
+  --cm-danger-tint: #fff7ed;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  display: flex;
+  margin: 0;
+  background: var(--cm-bg);
+  color: var(--cm-navy);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Matches AuthCard's outer wrapper: `flex flex-1 items-center justify-center bg-bg p-6`. */
+.cm-page {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+/* `w-full max-w-sm rounded-2xl border border-border bg-surface p-8 shadow-card` */
+.cm-card {
+  width: 100%;
+  max-width: 384px; /* max-w-sm */
+  padding: 32px; /* p-8 */
+  border: 1px solid var(--cm-border);
+  border-radius: 16px; /* rounded-2xl */
+  background: var(--cm-surface);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06); /* shadow-card */
+}
+
+/* `mb-6 text-center text-xl font-bold text-navy` */
+.cm-title {
+  margin: 0 0 24px;
+  color: var(--cm-navy);
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* `mb-6 flex justify-center gap-6 border-b border-border text-sm font-medium` */
+.cm-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--cm-border);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.cm-tab {
+  padding-bottom: 12px;
+  border-bottom: 2px solid transparent;
+  color: var(--cm-text-muted);
+  text-decoration: none;
+}
+
+.cm-tab-active {
+  border-bottom-color: var(--cm-navy);
+  color: var(--cm-navy);
+}
+
+/* `mb-5 flex flex-col gap-2.5` + per-button `flex items-center gap-2.5 rounded-full
+ * border border-border px-4 py-2.5 text-sm font-semibold text-navy` */
+.cm-social {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.cm-social-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid var(--cm-border);
+  border-radius: 9999px; /* rounded-full */
+  color: var(--cm-navy);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 120ms ease;
+}
+
+.cm-social-btn:hover {
+  background: #fafafa;
+  text-decoration: none;
+}
+
+/* `h-5 w-5 rounded-full bg-accent-tint text-[11px] font-bold text-accent` — a plain
+ * monogram, not the provider's brand color, matching the app's own 2-hue palette. */
+.cm-social-badge {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: var(--cm-accent-tint);
+  color: var(--cm-navy);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* `mb-5 flex items-center gap-2.5 text-xs font-medium text-text-faint` */
+.cm-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  color: var(--cm-text-faint);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cm-divider span {
+  height: 1px;
+  flex: 1;
+  background: var(--cm-border);
+}
+
+.cm-alert {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid rgb(234 88 12 / 40%);
+  border-radius: 9999px;
+  background: var(--cm-danger-tint);
+  color: var(--cm-danger);
+  font-size: 13px;
+}
+
+/* `flex flex-col gap-3.5` */
+.cm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cm-field {
+  display: flex;
+  flex-direction: column;
+}
+
+/* `mb-1.5 block text-xs font-medium text-text-muted` */
+.cm-label {
+  margin-bottom: 6px;
+  color: var(--cm-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cm-input-wrap {
+  position: relative;
+}
+
+.cm-input-icon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  color: var(--cm-text-faint);
+  pointer-events: none;
+}
+
+/* `w-full rounded-full border border-border py-2.5 pr-3.5 pl-10 text-sm outline-none
+ * focus:border-navy` */
+.cm-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--cm-border);
+  border-radius: 9999px; /* rounded-full */
+  background: #ffffff;
+  color: var(--cm-navy);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.cm-input::placeholder {
+  color: var(--cm-text-faint);
+}
+
+.cm-input:focus {
+  border-color: var(--cm-navy);
+}
+
+.cm-input-icon-l {
+  padding-left: 40px;
+}
+
+.cm-input-icon-r {
+  padding-right: 40px;
+}
+
+.cm-toggle-password {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  display: flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cm-text-faint);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.cm-toggle-password svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cm-row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -4px;
+  font-size: 13px;
+}
+
+.cm-remember {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cm-text-muted);
+}
+
+.cm-remember input {
+  margin: 0;
+}
+
+.cm-link {
+  color: var(--cm-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cm-link:hover {
+  color: var(--cm-primary-hover);
+  text-decoration: underline;
+}
+
+/* `mt-1.5 rounded-full bg-primary py-2.5 text-sm font-semibold text-white
+ * hover:bg-primary-hover` */
+.cm-submit {
+  height: 42px;
+  margin-top: 2px;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--cm-primary);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.cm-submit:hover {
+  background: var(--cm-primary-hover);
+}
+
+/* `mt-5 text-center text-xs text-text-muted` */
+.cm-footer {
+  margin: 20px 0 0;
+  color: var(--cm-text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.cm-link-strong {
+  color: var(--cm-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cm-link-strong:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 420px) {
+  .cm-page {
+    padding: 16px;
+  }
+
+  .cm-card {
+    padding: 24px;
+  }
+}

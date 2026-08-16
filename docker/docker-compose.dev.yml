@@ -88,6 +88,7 @@ services:
     volumes:
       - ./keycloak/themes/codementor:/opt/keycloak/themes/codementor:ro
       - ./keycloak/themes/codementor-lecturer:/opt/keycloak/themes/codementor-lecturer:ro
+      - ./keycloak/themes/codementor-web:/opt/keycloak/themes/codementor-web:ro
     depends_on:
       postgres:
         condition: service_healthy

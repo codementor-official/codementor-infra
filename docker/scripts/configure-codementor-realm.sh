@@ -63,11 +63,12 @@ ensure_public_client() {
   local name="$2"
   local redirects="$3"
   local origins="$4"
+  local login_theme="$5"
   local id
   local logout_redirects
   local attributes
   logout_redirects="$(printf '%s' "$redirects" | sed 's/^\[//;s/\]$//;s/"//g;s/,/##/g')"
-  attributes="{\"pkce.code.challenge.method\":\"S256\",\"post.logout.redirect.uris\":\"$logout_redirects\"}"
+  attributes="{\"pkce.code.challenge.method\":\"S256\",\"post.logout.redirect.uris\":\"$logout_redirects\",\"login_theme\":\"$login_theme\"}"
   id="$(client_id "$client")"
   if [ -z "$id" ]; then
     id="$(kc create clients -r "$realm" -s "clientId=$client" -s "name=$name" -s enabled=true -s publicClient=true -s standardFlowEnabled=true -s directAccessGrantsEnabled=false -s "attributes=$attributes" -s "redirectUris=$redirects" -s "webOrigins=$origins" -i)"
@@ -139,7 +140,7 @@ fi
 kc update "realms/$realm" \
   -s enabled=true \
   -s loginTheme=codementor \
-  -s sslRequired=NONE \
+  -s sslRequired=EXTERNAL \
   -s registrationAllowed=false \
   -s registrationEmailAsUsername=true \
   -s loginWithEmailAllowed=true \
@@ -164,14 +165,19 @@ for legacy_role in lecturer mentor; do
   fi
 done
 
-admin_redirects="${KEYCLOAK_ADMIN_REDIRECT_URIS:-[\"http://localhost:3002/*\",\"http://13.214.122.227:3002/*\"]}"
-admin_origins="${KEYCLOAK_ADMIN_WEB_ORIGINS:-[\"http://localhost:3002\",\"http://13.214.122.227:3002\"]}"
-admin_client_id="$(ensure_public_client codementor-admin 'CodeMentor Admin' "$admin_redirects" "$admin_origins")"
+admin_redirects="${KEYCLOAK_ADMIN_REDIRECT_URIS:-[\"http://localhost:3011/*\",\"http://13.214.122.227:3011/*\"]}"
+admin_origins="${KEYCLOAK_ADMIN_WEB_ORIGINS:-[\"http://localhost:3011\",\"http://13.214.122.227:3011\"]}"
+admin_client_id="$(ensure_public_client codementor-admin 'CodeMentor Admin' "$admin_redirects" "$admin_origins" codementor)"
+
+lecturer_redirects="${KEYCLOAK_LECTURER_REDIRECT_URIS:-[\"http://localhost:3010/*\",\"http://13.214.122.227:3010/*\"]}"
+lecturer_origins="${KEYCLOAK_LECTURER_WEB_ORIGINS:-[\"http://localhost:3010\",\"http://13.214.122.227:3010\"]}"
+lecturer_client_id="$(ensure_public_client codementor-lecturer 'CodeMentor Lecturer' "$lecturer_redirects" "$lecturer_origins" codementor-lecturer)"
 api_client_id="$(ensure_bearer_client)"
 user_service_client_id="$(ensure_service_client codementor-user-service 'CodeMentor User Service')"
 ai_client_id="$(ensure_service_client codementor-ai-agent 'CodeMentor AI Agent')"
 
 ensure_audience_mapper "$admin_client_id"
+ensure_audience_mapper "$lecturer_client_id"
 ensure_audience_mapper "$ai_client_id"
 
 kc add-roles -r "$realm" --uusername service-account-codementor-ai-agent --rolename AI_AGENT >/dev/null 2>&1 || true

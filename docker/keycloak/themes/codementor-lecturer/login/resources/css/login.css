@@ -86,7 +86,7 @@ body {
 #kc-header-wrapper::after {
   margin-top: 4px;
   color: var(--cm-muted);
-  content: "Admin Console";
+  content: "Trang giảng viên";
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0;

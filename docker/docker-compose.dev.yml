@@ -61,6 +61,13 @@ services:
       - start
       - --http-enabled=true
       - --hostname-strict=false
+      - --proxy-headers=xforwarded
+      # Theme edits (login.css etc.) land on disk instantly via the bind mount below,
+      # but Keycloak caches parsed theme resources in memory by default and won't
+      # notice — without these, every CSS tweak needs a container restart to show up.
+      - --spi-theme-cache-themes=false
+      - --spi-theme-cache-templates=false
+      - --spi-theme-static-max-age=-1
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/${KEYCLOAK_DB_NAME}
@@ -71,11 +78,16 @@ services:
       KC_CACHE: local
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME}
       JAVA_OPTS_KC_HEAP: -XX:InitialRAMPercentage=20 -XX:MaxRAMPercentage=60
     ports:
-      - "0.0.0.0:${KEYCLOAK_HTTP_PORT:-8080}:8080"
+      # Bound to loopback only — Nginx on the host is the sole public entry point
+      # (id.codementor.cloud, HTTPS). Keeping this open would let anyone reach
+      # Keycloak directly over bare HTTP, bypassing TLS entirely.
+      - "127.0.0.1:${KEYCLOAK_HTTP_PORT:-8080}:8080"
     volumes:
       - ./keycloak/themes/codementor:/opt/keycloak/themes/codementor:ro
+      - ./keycloak/themes/codementor-lecturer:/opt/keycloak/themes/codementor-lecturer:ro
     depends_on:
       postgres:
         condition: service_healthy

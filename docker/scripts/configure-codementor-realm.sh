@@ -101,13 +101,17 @@ ensure_bearer_client() {
 # `standardFlowEnabled=false` on purpose — this client must never be usable for a
 # browser redirect flow. That stays with the public `codementor-web` client, which
 # keeps `directAccessGrantsEnabled=false`.
+#
+# The service account exists for self-registration: Keycloak has no public sign-up API,
+# so the only way to keep the sign-up form inside Next.js is for the BFF to create the
+# account through the Admin REST API. It gets `manage-users` and nothing else.
 ensure_bff_client() {
   local id
   id="$(client_id codementor-web-bff)"
   if [ -z "$id" ]; then
-    id="$(kc create clients -r "$realm" -s clientId=codementor-web-bff -s 'name=CodeMentor Web BFF' -s enabled=true -s publicClient=false -s clientAuthenticatorType=client-secret -s serviceAccountsEnabled=false -s standardFlowEnabled=false -s directAccessGrantsEnabled=true -i)"
+    id="$(kc create clients -r "$realm" -s clientId=codementor-web-bff -s 'name=CodeMentor Web BFF' -s enabled=true -s publicClient=false -s clientAuthenticatorType=client-secret -s serviceAccountsEnabled=true -s standardFlowEnabled=false -s directAccessGrantsEnabled=true -i)"
   else
-    kc update "clients/$id" -r "$realm" -s 'name=CodeMentor Web BFF' -s enabled=true -s publicClient=false -s clientAuthenticatorType=client-secret -s serviceAccountsEnabled=false -s standardFlowEnabled=false -s directAccessGrantsEnabled=true >/dev/null
+    kc update "clients/$id" -r "$realm" -s 'name=CodeMentor Web BFF' -s enabled=true -s publicClient=false -s clientAuthenticatorType=client-secret -s serviceAccountsEnabled=true -s standardFlowEnabled=false -s directAccessGrantsEnabled=true >/dev/null
   fi
   printf '%s' "$id"
 }
@@ -182,6 +186,46 @@ ensure_audience_mapper() {
   fi
 }
 
+# Keycloak's stock user profile marks firstName AND lastName as required for every
+# human account. Two consequences CodeMentor does not want:
+#
+#   - Direct Access Grant refuses any account missing either one with the unhelpful
+#     "Account is not fully set up". Vietnamese sign-up collects a single "Họ và tên",
+#     so a brand-new account trips this on its very first login.
+#   - In a browser flow Keycloak answers with its own "complete your profile" page —
+#     the exact screen the Next.js UI is meant to replace.
+#
+# The names are still stored and still shown; they are just not mandatory. Email stays
+# required, because that is what identifies the account.
+ensure_user_profile() {
+  kc get users/profile -r "$realm" \
+    | jq '.attributes |= map(if .name == "firstName" or .name == "lastName" then del(.required) else . end)' \
+    | docker exec -i "$container" "$kcadm" update users/profile -r "$realm" --config "$config_file" -f - >/dev/null
+}
+
+# First login through Google/Facebook must land straight inside CodeMentor.
+#
+# `idp-review-profile` defaults to "missing", which means Keycloak shows its own
+# review-profile page whenever the identity provider did not hand over every required
+# field — Facebook in particular does not always return a family name. Turning it off
+# lets Keycloak create the account silently from the IdP claims; anything else
+# CodeMentor needs is asked for by the onboarding UI in apps/web.
+ensure_first_broker_login_silent() {
+  local executions
+  local config_id
+  local execution_id
+  executions="$(kc get "authentication/flows/first%20broker%20login/executions" -r "$realm")"
+  config_id="$(printf '%s' "$executions" | jq -r '.[] | select(.providerId == "idp-review-profile") | .authenticationConfig // empty')"
+  if [ -n "$config_id" ]; then
+    kc update "authentication/config/$config_id" -r "$realm" -s 'config."update.profile.on.first.login"=off' >/dev/null
+  else
+    execution_id="$(printf '%s' "$executions" | jq -r '.[] | select(.providerId == "idp-review-profile") | .id')"
+    kc create "authentication/executions/$execution_id/config" -r "$realm" \
+      -s alias=codementor-review-profile \
+      -s 'config."update.profile.on.first.login"=off' >/dev/null
+  fi
+}
+
 ensure_user() {
   local username="$1"
   local email="$2"
@@ -224,6 +268,9 @@ kc update "realms/$realm" \
   -s internationalizationEnabled=true \
   -s 'supportedLocales=["vi"]' \
   -s defaultLocale=vi >/dev/null
+
+ensure_user_profile
+ensure_first_broker_login_silent
 
 ensure_realm_role STUDENT 'CodeMentor student'
 ensure_realm_role LECTURER 'CodeMentor lecturer'
@@ -270,6 +317,9 @@ ensure_identity_provider google google GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET con
 ensure_identity_provider facebook facebook FACEBOOK_CLIENT_ID FACEBOOK_CLIENT_SECRET
 
 kc add-roles -r "$realm" --uusername service-account-codementor-ai-agent --rolename AI_AGENT >/dev/null 2>&1 || true
+# Self-registration from apps/web: create the account, set its password, grant STUDENT.
+# `manage-users` is the narrowest realm-management role that covers all three.
+kc add-roles -r "$realm" --uusername service-account-codementor-web-bff --cclientid realm-management --rolename manage-users >/dev/null 2>&1 || true
 for role in query-users view-users manage-users; do
   kc add-roles -r "$realm" --uusername service-account-codementor-user-service --cclientid realm-management --rolename "$role" >/dev/null 2>&1 || true
 done

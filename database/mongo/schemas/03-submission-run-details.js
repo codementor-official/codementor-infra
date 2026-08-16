@@ -40,6 +40,8 @@ const schema = {
           passed: { bsonType: "bool" },
           visibility: { enum: ["public", "hidden"] },
           // Hidden-case input/output are omitted when serving a learner; stored for mentors.
+          // Still strings in function mode: the judge writes json.dumps() of the value, so
+          // this validator needs no migration and the UI keeps rendering them as text.
           input: { bsonType: "string" },
           expected: { bsonType: "string" },
           actual: { bsonType: "string" },
@@ -47,11 +49,25 @@ const schema = {
           runtimeMs: { bsonType: "int", minimum: 0 },
           memoryKb: { bsonType: "int", minimum: 0 },
           verdict: {
-            enum: ["accepted", "wrong_answer", "runtime_error", "timeout", "memory_exceeded"],
+            // `skipped`: the container died (hard timeout, OOM) before this case ran. Only
+            // reachable in function mode, where all cases share one container.
+            enum: [
+              "accepted",
+              "wrong_answer",
+              "runtime_error",
+              "timeout",
+              "memory_exceeded",
+              "skipped",
+            ],
           },
         },
       },
     },
+
+    // Whatever the learner printed, captured separately from the graded result. In function
+    // mode the driver owns stdout, so print() debugging has to be collected and handed back
+    // rather than silently discarded — it is the console tab of the solve workspace.
+    consoleOutput: { bsonType: "string" },
 
     judge: {
       bsonType: "object",

@@ -57,6 +57,17 @@ const schema = {
       },
     },
 
+    // Rich-text body as authored in the lecturer studio, which uses Tiptap and emits
+    // HTML. `sections` above models content as typed blocks, which is the right shape
+    // for content produced by a pipeline but cannot represent what a WYSIWYG editor
+    // produces without a lossy conversion in both directions. The two coexist: blocks
+    // for structured content, `contentHtml` for authored prose. Same field name and
+    // same reason as exercise_contents.theory.contentHtml.
+    //
+    // The collection validates strictly with additionalProperties:false, so without
+    // this the studio's first save is rejected by the database.
+    contentHtml: { bsonType: "string" },
+
     // "Bài tập" lessons show a short brief before opening the workspace.
     exerciseBrief: { bsonType: "array", items: { bsonType: "string" } },
 

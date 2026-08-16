@@ -55,16 +55,58 @@ const schema = {
         },
       },
     },
+    // How the exercise is run and graded. Absent means "stdin_stdout" — the model every
+    // exercise authored before the function judge existed. Nothing is migrated: the judge
+    // branches on this, it does not rewrite old bodies.
+    ioMode: { enum: ["stdin_stdout", "function"] },
+
+    // function mode only: the contract the learner implements. Stored as a language-neutral
+    // type IR ({kind:"list", of:{kind:"float"}}), never as a Python signature string —
+    // generating Java/JS from a string would mean owning a Python parser forever.
+    signature: {
+      bsonType: "object",
+      required: ["functionName", "parameters", "returnType"],
+      additionalProperties: false,
+      properties: {
+        // snake_case; the code generators derive solveQuadratic/solve_quadratic from it.
+        functionName: { bsonType: "string" },
+        parameters: {
+          bsonType: "array",
+          description: "positional; order is part of the contract",
+          items: {
+            bsonType: "object",
+            required: ["name", "type"],
+            additionalProperties: false,
+            properties: {
+              name: { bsonType: "string" },
+              type: { bsonType: "object", description: "type IR node" },
+              description: { bsonType: "string" },
+            },
+          },
+        },
+        returnType: { bsonType: "object", description: "type IR node" },
+      },
+    },
+
     testCases: {
       bsonType: "array",
       items: {
         bsonType: "object",
-        required: ["order", "input", "expected", "visibility"],
+        // `input`/`expected` were required until function mode arrived; a function-mode case
+        // carries `args` and a non-string `expected` instead, so neither can be mandatory.
+        required: ["order", "visibility"],
         additionalProperties: false,
         properties: {
           order: { bsonType: "int", minimum: 1 },
+          // stdin_stdout mode.
           input: { bsonType: "string" },
-          expected: { bsonType: "string" },
+          // function mode: positional arguments, matching `signature.parameters` in order.
+          // Keyed objects would add a mapping layer that breaks the moment an author renames
+          // a parameter — the call is positional in all three languages anyway.
+          args: { bsonType: "array" },
+          // Deliberately untyped: a string in stdin mode, any JSON value the return type
+          // allows in function mode (number, array, object, null).
+          expected: {},
           // public cases are shown in the workspace; hidden ones only run at submit.
           visibility: { enum: ["public", "hidden"] },
           // true when produced by running the reference solution, false when hand-typed —
@@ -94,7 +136,10 @@ const schema = {
       bsonType: "object",
       additionalProperties: false,
       properties: {
-        checker: { enum: ["exact", "trimmed", "float", "custom"] },
+        // exact/trimmed/float predate function mode and keep their stdin meaning; the judge
+        // reads `float` as float-tolerance in both modes. `unordered` compares as a multiset
+        // and only makes sense once results are typed values, i.e. function mode.
+        checker: { enum: ["exact", "trimmed", "float", "custom", "unordered"] },
         floatTolerance: { bsonType: "double" },
         customCheckerCode: { bsonType: "string" },
         stopOnFirstFailure: { bsonType: "bool" },

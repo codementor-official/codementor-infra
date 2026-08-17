@@ -25,7 +25,13 @@ const schema = {
     eventId: { bsonType: "string", description: "EventEnvelope.eventId (uuid)" },
 
     type: {
-      enum: ["COURSE_PUBLISHED", "EXERCISE_PUBLISHED", "ROADMAP_PUBLISHED", "ADMIN_ANNOUNCEMENT"],
+      enum: [
+        "COURSE_PUBLISHED",
+        "EXERCISE_PUBLISHED",
+        "ROADMAP_PUBLISHED",
+        "ARTICLE_PUBLISHED",
+        "ADMIN_ANNOUNCEMENT",
+      ],
     },
 
     title: { bsonType: "string" },
@@ -36,7 +42,7 @@ const schema = {
     audienceType: { enum: ["ALL"] },
 
     // What the notification points at. Null for admin announcements, which reference nothing.
-    referenceType: { enum: ["COURSE", "EXERCISE", "ROADMAP", null] },
+    referenceType: { enum: ["COURSE", "EXERCISE", "ROADMAP", "POST", null] },
     referenceId: { bsonType: ["string", "null"] },
 
     // The call to action, resolved when the notification is built. Storing the URL rather than

@@ -269,6 +269,28 @@ kc update "realms/$realm" \
   -s 'supportedLocales=["vi"]' \
   -s defaultLocale=vi >/dev/null
 
+# Login events, for the account detail panel in the admin console.
+#
+# Off by default in Keycloak, and the failure is silent: the events endpoint answers 200
+# with an empty array whether nothing happened or nothing is being recorded, so a console
+# reading it looks merely quiet rather than misconfigured.
+#
+# Only the event types the console actually shows are enabled. Keycloak can record dozens,
+# and every one it records is a row it has to store and expire; a login history panel needs
+# who signed in, who failed, and who signed out.
+#
+# 30 days of retention, not forever: these rows exist to answer "what happened to this
+# account recently". Long-term traceability of *administrative* action is what audit_logs
+# in Postgres is for, and that one is append-only and never expires.
+#
+# adminEventsEnabled stays off. Keycloak's admin events would duplicate audit_logs for the
+# actions we already record, minus the business context, and cost a second place to look.
+kc update "realms/$realm" \
+  -s eventsEnabled=true \
+  -s eventsExpiration=2592000 \
+  -s 'enabledEventTypes=["LOGIN","LOGIN_ERROR","LOGOUT","REGISTER","REGISTER_ERROR","UPDATE_PASSWORD"]' \
+  -s adminEventsEnabled=false >/dev/null
+
 ensure_user_profile
 ensure_first_broker_login_silent
 
@@ -320,7 +342,10 @@ kc add-roles -r "$realm" --uusername service-account-codementor-ai-agent --rolen
 # Self-registration from apps/web: create the account, set its password, grant STUDENT.
 # `manage-users` is the narrowest realm-management role that covers all three.
 kc add-roles -r "$realm" --uusername service-account-codementor-web-bff --cclientid realm-management --rolename manage-users >/dev/null 2>&1 || true
-for role in query-users view-users manage-users; do
+# `view-events` is what lets core-service read a user's login history for the admin
+# console. It is read-only and separate from the user-management roles above, so granting
+# it does not widen what this service account can change.
+for role in query-users view-users manage-users view-events; do
   kc add-roles -r "$realm" --uusername service-account-codementor-user-service --cclientid realm-management --rolename "$role" >/dev/null 2>&1 || true
 done
 

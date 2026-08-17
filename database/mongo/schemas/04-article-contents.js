@@ -24,6 +24,16 @@ const schema = {
         },
       },
     },
+    // HTML from the WYSIWYG editor, exactly as lesson_contents.contentHtml does it.
+    // `sections` above models prose as typed blocks — the right shape for content built
+    // by a pipeline, but it cannot round-trip what an editor produces without losing
+    // formatting in both directions. The two coexist: blocks for structured imports,
+    // `contentHtml` for anything a person actually writes.
+    //
+    // The collection validates strictly with additionalProperties:false, so without this
+    // the editor's first save is rejected by the database.
+    contentHtml: { bsonType: "string" },
+
     updatedAt: { bsonType: "date" },
     createdAt: { bsonType: "date" },
   },

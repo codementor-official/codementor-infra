@@ -45,9 +45,20 @@ INSERT INTO technologies (slug, name) VALUES
   ('css','CSS'), ('javascript','JavaScript'), ('react','React'), ('typescript','TypeScript'),
   ('python','Python'), ('cpp','C++'), ('nodejs','Node.js'), ('c','C');
 
+-- Two vocabularies in one table, on purpose: the first row covers what an *exercise* is
+-- about, the second what an *article* is about. Splitting them into two tables would
+-- duplicate every join and every filter for no gain — a tag is a tag.
+--
+-- ON CONFLICT so this block can be re-run on its own against a live database when new
+-- topics are added, without replaying the rest of the seed.
 INSERT INTO tags (slug, name) VALUES
   ('mang','Mảng'), ('thuat-toan','Thuật toán'), ('oop','OOP'), ('dom','DOM'),
-  ('rest-api','REST API'), ('security','Security'), ('sap-xep','Sắp xếp'), ('tim-kiem','Tìm kiếm');
+  ('rest-api','REST API'), ('security','Security'), ('sap-xep','Sắp xếp'), ('tim-kiem','Tìm kiếm'),
+  ('front-end','Front-end'), ('back-end','Back-end'), ('javascript','JavaScript'),
+  ('react','React'), ('tailwind-css','Tailwind CSS'), ('websocket','WebSocket'),
+  ('co-so-du-lieu','Cơ sở dữ liệu'), ('kiem-thu','Kiểm thử'), ('devops','DevOps'),
+  ('cong-cu','Công cụ'), ('lo-trinh-hoc','Lộ trình học'), ('kinh-nghiem','Kinh nghiệm')
+ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO companies (slug, name) VALUES
   ('vng','VNG'), ('momo','MoMo'), ('viettel','Viettel'), ('fpt-software','FPT Software');

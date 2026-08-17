@@ -15,6 +15,8 @@ const modules = [
   "mongo/schemas/02-lesson-contents.js",
   "mongo/schemas/03-submission-run-details.js",
   "mongo/schemas/04-article-contents.js",
+  "mongo/schemas/05-notifications.js",
+  "mongo/schemas/06-notification-reads.js",
 ];
 
 print(`\n== codementor mongo init → ${targetDb} ==`);

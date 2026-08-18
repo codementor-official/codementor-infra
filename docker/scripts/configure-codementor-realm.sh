@@ -342,10 +342,16 @@ kc add-roles -r "$realm" --uusername service-account-codementor-ai-agent --rolen
 # Self-registration from apps/web: create the account, set its password, grant STUDENT.
 # `manage-users` is the narrowest realm-management role that covers all three.
 kc add-roles -r "$realm" --uusername service-account-codementor-web-bff --cclientid realm-management --rolename manage-users >/dev/null 2>&1 || true
-# `view-events` is what lets core-service read a user's login history for the admin
-# console. It is read-only and separate from the user-management roles above, so granting
-# it does not widen what this service account can change.
-for role in query-users view-users manage-users view-events; do
+# `view-events` lets core-service read a user's login history for the admin console.
+#
+# `view-realm` is what lets it assign a role at all: Keycloak's role-mapping endpoint takes
+# a full role representation, so the caller has to GET /roles/{name} first, and that read is
+# gated by view-realm rather than by manage-users. Without it, creating an account fails
+# after the account already exists, and changing a role fails outright.
+#
+# Both are read-only and separate from the user-management roles above, so granting them
+# does not widen what this service account can change.
+for role in query-users view-users manage-users view-events view-realm; do
   kc add-roles -r "$realm" --uusername service-account-codementor-user-service --cclientid realm-management --rolename "$role" >/dev/null 2>&1 || true
 done
 

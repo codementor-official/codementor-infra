@@ -31,15 +31,29 @@ const schema = {
         "ROADMAP_PUBLISHED",
         "ARTICLE_PUBLISHED",
         "ADMIN_ANNOUNCEMENT",
+        // Vòng duyệt nội dung. Khác năm loại trên ở chỗ người nhận không phải người học:
+        // REVIEW_REQUESTED gửi cho admin, ba loại còn lại gửi riêng cho tác giả.
+        "CONTENT_REVIEW_REQUESTED",
+        "CONTENT_APPROVED",
+        "CONTENT_CHANGES_REQUESTED",
+        "CONTENT_REJECTED",
       ],
     },
 
     title: { bsonType: "string" },
     message: { bsonType: "string" },
 
-    // Only ALL exists today. Kept as an enum rather than assumed, so adding USER/ROLE/COURSE
-    // later is a validator change and not a schema redesign — the read path already filters on it.
-    audienceType: { enum: ["ALL"] },
+    // Who the notification is for. ALL is every signed-in user; ROLE and USER narrow it to
+    // one role or one person, and `audienceKey` carries which.
+    audienceType: { enum: ["ALL", "ROLE", "USER"] },
+
+    // Role name for ROLE, Keycloak `sub` for USER, null for ALL. Keycloak's subject rather
+    // than `users.id` because realtime-service keys its socket rooms off the handshake token
+    // and deliberately never reads another service's tables.
+    //
+    // Not in `required`: documents written before targeting existed have no such field, and
+    // making it required would reject the next write that touches one of them.
+    audienceKey: { bsonType: ["string", "null"] },
 
     // What the notification points at. Null for admin announcements, which reference nothing.
     referenceType: { enum: ["COURSE", "EXERCISE", "ROADMAP", "POST", null] },
@@ -67,8 +81,13 @@ function apply(db) {
   }
   const c = db.getCollection(COLLECTION);
   c.createIndex({ eventId: 1 }, { unique: true, name: "uq_event_id" });
-  // The only read pattern: newest first, paginated.
-  c.createIndex({ createdAt: -1 }, { name: "ix_created_at_desc" });
+  // The only read pattern: newest first, paginated, filtered to what this viewer is
+  // addressed by. Audience first because it is the selective part — leading with createdAt
+  // makes the index a full scan in date order once most notifications are not for you.
+  c.createIndex(
+    { audienceType: 1, audienceKey: 1, createdAt: -1 },
+    { name: "ix_audience_created_at_desc" },
+  );
   return COLLECTION;
 }
 

@@ -32,11 +32,21 @@ const schema = {
         "ARTICLE_PUBLISHED",
         "ADMIN_ANNOUNCEMENT",
         // Vòng duyệt nội dung. Khác năm loại trên ở chỗ người nhận không phải người học:
-        // REVIEW_REQUESTED gửi cho admin, ba loại còn lại gửi riêng cho tác giả.
+        // REVIEW_REQUESTED gửi cho admin, các loại còn lại gửi riêng cho tác giả.
         "CONTENT_REVIEW_REQUESTED",
+        // Tác giả xin gỡ một nội dung ĐANG công khai. Cũng gửi cho admin, nhưng ngược
+        // chiều REVIEW_REQUESTED: kia xin đưa lên, đây xin gỡ xuống, và đây luôn kèm lý do.
+        "CONTENT_REMOVAL_REQUESTED",
         "CONTENT_APPROVED",
         "CONTENT_CHANGES_REQUESTED",
         "CONTENT_REJECTED",
+        // Admin thu hồi nội dung đang công khai — kể cả khi đó là duyệt một yêu cầu XIN GỠ
+        // mà chính tác giả vừa gửi (`requestRemoval`). Gỡ mà không báo thì tác giả chỉ phát
+        // hiện qua việc trang của mình biến mất.
+        "CONTENT_ARCHIVED",
+        // Admin từ chối một yêu cầu xin gỡ — nội dung vẫn công khai như cũ, tác giả cần biết
+        // để không tưởng nhầm là nó đã được gỡ.
+        "REMOVAL_REQUEST_DENIED",
       ],
     },
 

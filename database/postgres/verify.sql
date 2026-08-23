@@ -61,7 +61,6 @@ END $$;
 DO $$
 DECLARE
   giasi uuid := 'a0000000-0000-4000-8000-000000000001';
-  an    uuid := 'a0000000-0000-4000-8000-000000000003';
 BEGIN
   -- BRANCHING: L1 done → L4 open (L4 requires only L1)
   IF NOT fn_lesson_available(giasi, 'f0000000-0000-4000-8000-000000000004') THEN
@@ -86,64 +85,7 @@ BEGIN
     RAISE EXCEPTION 'linear: second lesson must be locked before the first is completed';
   END IF;
 
-  -- UNCONSTRAINED roadmap: everything open with no edges
-  IF NOT fn_roadmap_course_available(giasi, 'd0000000-0000-4000-8000-000000000007') THEN
-    RAISE EXCEPTION 'free roadmap: every course must be available';
-  END IF;
-
-  -- GRAPH roadmap: SQL cơ bản gated behind Java Core, which is not finished
-  IF fn_roadmap_course_available(giasi, 'd0000000-0000-4000-8000-000000000002') THEN
-    RAISE EXCEPTION 'graph roadmap: course 2 must be locked until course 1 completes';
-  END IF;
-
-  -- Intrinsic course prerequisite: Spring Boot needs Java Core AND SQL
-  IF fn_course_available(giasi, 'c0000000-0000-4000-8000-000000000003') THEN
-    RAISE EXCEPTION 'AND prerequisite: Spring Boot must be locked';
-  END IF;
-
-  -- EXERCISE branching: E1 solved → E2 open, E4 still closed (needs E3)
-  IF NOT fn_exercise_available(giasi, '20000000-0000-4000-8000-000000000001',
-                                      '10000000-0000-4000-8000-000000000002') THEN
-    RAISE EXCEPTION 'exercise branching: E2 should be open after E1';
-  END IF;
-  IF fn_exercise_available(giasi, '20000000-0000-4000-8000-000000000001',
-                                  '10000000-0000-4000-8000-000000000004') THEN
-    RAISE EXCEPTION 'exercise branching: E4 should be locked (E3 unsolved)';
-  END IF;
-
-  -- SAME exercise, unconstrained set → open. Proves no duplication is needed.
-  IF NOT fn_exercise_available(giasi, '20000000-0000-4000-8000-000000000002',
-                                      '10000000-0000-4000-8000-000000000004') THEN
-    RAISE EXCEPTION 'free set: E4 should be open in the unconstrained collection';
-  END IF;
-
-  -- LEARNER OVERRIDE: `an` set the gated track to free → E4 open for them
-  IF NOT fn_exercise_available(an, '20000000-0000-4000-8000-000000000001',
-                                   '10000000-0000-4000-8000-000000000004') THEN
-    RAISE EXCEPTION 'mode override: an opted out of gating, E4 should be open';
-  END IF;
-
-  -- OR prerequisite: E8 needs E6 OR E7; giasi has neither → closed
-  IF fn_exercise_available(giasi, '20000000-0000-4000-8000-000000000003',
-                                  '10000000-0000-4000-8000-000000000008') THEN
-    RAISE EXCEPTION 'OR prerequisite: E8 must be locked with neither branch solved';
-  END IF;
-
-  RAISE NOTICE 'PASS  availability (branching, AND, OR, linear, free, override)';
-END $$;
-
--- OR semantics, positive half: solving ONE branch is enough.
-DO $$
-DECLARE giasi uuid := 'a0000000-0000-4000-8000-000000000001';
-BEGIN
-  INSERT INTO exercise_progress (user_id, exercise_id, status, attempt_count, first_solved_at)
-  VALUES (giasi, '10000000-0000-4000-8000-000000000007', 'solved', 1, now());
-
-  IF NOT fn_exercise_available(giasi, '20000000-0000-4000-8000-000000000003',
-                                      '10000000-0000-4000-8000-000000000008') THEN
-    RAISE EXCEPTION 'OR prerequisite: solving group 1 alone should unlock E8';
-  END IF;
-  RAISE NOTICE 'PASS  OR prerequisite unlocks on a single satisfied group';
+  RAISE NOTICE 'PASS  availability (branching, AND join, linear)';
 END $$;
 
 \echo ''
@@ -207,24 +149,6 @@ SELECT pg_temp.expect_failure($$
   VALUES ('c0000000-0000-4000-8000-000000000001',
           'f0000000-0000-4000-8000-000000000004','f0000000-0000-4000-8000-0000000000ff')
 $$, 'missing entity rejected', '23503');
-
--- exercise edge outside the set
-SELECT pg_temp.expect_failure($$
-  INSERT INTO exercise_prerequisites (set_id, target_exercise_id, source_exercise_id)
-  VALUES ('20000000-0000-4000-8000-000000000001',
-          '10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000006')
-$$, 'exercise edge outside set rejected', '23503');
-
--- prerequisite on archived content
-DO $$
-BEGIN
-  UPDATE courses SET status = 'archived' WHERE id = 'c0000000-0000-4000-8000-000000000002';
-END $$;
-
-SELECT pg_temp.expect_failure($$
-  INSERT INTO course_prerequisites (target_course_id, source_course_id)
-  VALUES ('c0000000-0000-4000-8000-000000000004','c0000000-0000-4000-8000-000000000002')
-$$, 'archived-content prerequisite rejected', '23514');
 
 -- deleting a course a roadmap still uses must fail loudly.
 -- ON DELETE RESTRICT raises 23001 (restrict_violation), not 23503.

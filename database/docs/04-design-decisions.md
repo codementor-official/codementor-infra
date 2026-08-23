@@ -12,12 +12,13 @@ code, evaluation config) is a MongoDB document joined by `exercises.content_ref`
 at an exercise and every one of them needs referential integrity —
 
 ```
-exercise_prerequisites   cycle detection must traverse a real graph
 exercise_set_items       set membership, with position
 exercise_progress        per-user state, cascade on user delete
 submissions              grading records, ON DELETE RESTRICT
 lessons.exercise_id      a lesson of type='exercise' runs one
 ```
+
+(`exercise_prerequisites` used to belong on this list too — removed in `0021`, see §3/§5 below.)
 
 With the exercise living only in Mongo, all five become unenforced string references. Deleting an
 exercise would silently orphan submissions; a prerequisite could point at a document that no
@@ -41,6 +42,12 @@ Everything per-learner moved to `lesson_progress`, `exercise_progress`, `course_
 the asking learner and on the progression mode, so it is computed by `fn_lesson_available()`.
 
 ## 3. AND/OR as `group_index` (DNF) rather than an expression tree
+
+> **Update (`0021`):** this decision applies to `lesson_prerequisites` only now.
+> `roadmap_course_prerequisites`, `course_prerequisites`, `chapter_prerequisites` and
+> `exercise_prerequisites` were dropped — no application code ever wrote edges into them, so the
+> AND/OR evaluation they existed for never ran outside this repo's own seed/verify data. See
+> `02-dependency-model.md`.
 
 **Decision.** One `smallint` per edge. Same group = AND, different groups = OR.
 
@@ -69,17 +76,21 @@ These are different rules, not one rule with different data:
 must be rewritten whenever a lesson is inserted. This keeps ordering and dependency genuinely
 separate rather than making one impersonate the other.
 
-## 5. Prerequisites exist at two course levels
+## 5. Prerequisites exist at two course levels — historical, both removed in `0021`
 
-`course_prerequisites` (intrinsic) and `roadmap_course_prerequisites` (curricular) look redundant
-but answer different questions:
+Neither table survived: no usecase or DTO ever wrote to either one, so the distinction below never
+got exercised outside seed data. Kept as a record of the reasoning in case a future "course needs
+course, regardless of curriculum" requirement brings one of them back.
+
+`course_prerequisites` (intrinsic) and `roadmap_course_prerequisites` (curricular) looked redundant
+but answered different questions:
 
 | | Question | Example |
 | --- | --- | --- |
 | `course_prerequisites` | what must be true to *understand* this course | Spring Boot REST API needs Java Core, in any context |
 | `roadmap_course_prerequisites` | what this *curriculum* wants you to do first | this roadmap teaches SQL before Spring, another does not |
 
-Edges in the second reference `roadmap_courses.id` (the membership row), so the same course can
+Edges in the second referenced `roadmap_courses.id` (the membership row), so the same course could
 be gated in one roadmap and free in another without duplicating the course.
 
 ## 6. Scope violations are prevented by composite FKs, not triggers
@@ -93,8 +104,9 @@ This required denormalising `lessons.course_id` — which is safe because a seco
 course. The denormalised column cannot drift.
 
 **Why not triggers.** Declarative constraints cannot be bypassed by a bulk load, a migration, or
-an admin script, and cost nothing at runtime. Only cycle detection and the archived-content check
-genuinely need procedural code.
+an admin script, and cost nothing at runtime. Only cycle detection genuinely needs procedural code
+today — the archived-content check (`fn_reject_archived_*_edge`) went with the three tables it
+guarded in `0021`.
 
 ## 7. Progress: persisted, derived, or cached
 
@@ -123,8 +135,10 @@ source is reachable — catching indirect cycles (`A→B→C→A`), not just `A�
 pre-existing bad data cannot make the probe loop forever, and it is scoped to one course/set, so
 the traversal stays small.
 
-One generic function serves all five tables, parameterised with table and column names via
-`TG_ARGV`, so the rule cannot diverge between levels.
+One generic function (`fn_prevent_dependency_cycle`), parameterised with table and column names
+via `TG_ARGV`, originally served all five prerequisite tables so the rule couldn't diverge between
+levels. Four of those tables are gone (`0021`); the function itself was kept and still guards
+`lesson_prerequisites`, the one level that ended up wired to the application.
 
 Verified: `postgres/verify.sql` asserts direct and indirect cycles are both rejected with
 SQLSTATE `23514`.

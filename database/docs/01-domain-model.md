@@ -83,10 +83,7 @@ scheduler must query *"which users have a session starting at 19:00 on Monday"* 
 erDiagram
     roadmaps ||--o{ roadmap_courses : "contains"
     courses  ||--o{ roadmap_courses : "appears in"
-    roadmap_courses ||--o{ roadmap_course_prerequisites : "gated by"
-    courses ||--o{ course_prerequisites : "gated by"
     courses ||--o{ chapters : "owns"
-    chapters ||--o{ chapter_prerequisites : "gated by"
     chapters ||--o{ lessons : "owns"
     lessons ||--o{ lesson_prerequisites : "gated by"
     lessons }o--o| exercises : "type=exercise runs"
@@ -94,7 +91,6 @@ erDiagram
     courses ||--o{ course_reviews : "rated by"
     exercise_sets ||--o{ exercise_set_items : "curates"
     exercises ||--o{ exercise_set_items : "member of"
-    exercise_sets ||--o{ exercise_prerequisites : "scopes"
 
     roadmaps {
         uuid id PK
@@ -185,13 +181,14 @@ erDiagram
 
 Key structural decisions:
 
-- **`roadmap_courses` is a first-class entity, not a plain join.** Position and gating are properties
-  of *"this course inside this roadmap"*, not of the course. The same course can sit at position 2
-  in one roadmap with prerequisites and at position 5 in another with none. Prerequisite edges
-  therefore reference `roadmap_courses.id`, not `courses.id`.
-- **Two levels of course prerequisite.** `course_prerequisites` is *intrinsic* ("Spring Boot REST API
-  needs Java Core, wherever you meet it"); `roadmap_course_prerequisites` is *curricular* (this
-  roadmap's chosen sequence). The frontend conflates them into one prose array; the domain does not.
+- **`roadmap_courses` is a first-class entity, not a plain join.** Position (and, historically,
+  gating) are properties of *"this course inside this roadmap"*, not of the course. The same course
+  can sit at position 2 in one roadmap and position 5 in another.
+- **Two levels of course prerequisite — removed.** `course_prerequisites` (intrinsic: "Spring Boot
+  REST API needs Java Core, wherever you meet it") and `roadmap_course_prerequisites` (curricular:
+  this roadmap's chosen sequence) both existed, but no application code ever wrote to either —
+  `0021_drop_unused_prerequisite_graph.sql` dropped them. `prerequisite_note` (prose, display only)
+  is what the frontend actually shows today. See `02-dependency-model.md`.
 - **`exercises` keeps a relational spine** even though its body lives in MongoDB — because
   dependencies, progress, assignments and set membership all need enforceable foreign keys. See
   `04-design-decisions.md §1`.
@@ -400,9 +397,10 @@ Owners are not stored — they are unconditionally permitted in the resolver, as
 | group → members | 1:N | group | — | CASCADE | (group_id, user_id) |
 | group_exercise → assignments | 1:N | group_exercise | — | CASCADE | (group_exercise_id, member_id) |
 | assignment → submissions | 1:N | assignment | yes | SET NULL | (user_id, exercise_id, attempt_number) |
-| all `*_prerequisites` | N:M | the gated entity | — | CASCADE | (target, source, group_index) |
+| `lesson_prerequisites` | N:M | lesson | — | CASCADE | (target_lesson_id, source_lesson_id, group_index) |
 
 **RESTRICT on `courses`** is deliberate: deleting a course that a roadmap still references should
 fail loudly rather than silently reshaping someone's curriculum. Content is retired with
-`status = 'archived'`, not deleted — and `0010_dependency_guards.sql` refuses to add a prerequisite
-pointing at archived content.
+`status = 'archived'`, not deleted. (`0010_dependency_guards.sql` also refused prerequisites pointing
+at archived courses/roadmap-courses/exercises, but that guard applied only to the four
+`*_prerequisites` tables `0021` removed — `lesson_prerequisites` never had an archived-content check.)

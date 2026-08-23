@@ -1,6 +1,14 @@
 # Dependency Model
 
-One mechanism, applied at five levels. This document defines it once and then shows each level.
+`0006_dependencies.sql` originally built the same AND/OR mechanism at five levels: roadmap→course,
+course→course, chapter, lesson, exercise. `0021_drop_unused_prerequisite_graph.sql` removed four of
+them — `roadmap_course_prerequisites`, `course_prerequisites`, `chapter_prerequisites`,
+`exercise_prerequisites` and their `fn_*_available` functions never got an application writer or
+caller; only this repo's own seed/verify data ever touched them. **Lesson-level gating is the only
+one still live**: `learning-service` derives `lesson_prerequisites` automatically from curriculum
+order (`deriveLessonSources` — always a single AND group, never OR), and `fn_lesson_available` is
+the only one of the six original functions any service calls. This document now describes that one
+level; the mechanism below is preserved because lesson gating still uses it.
 
 ## 1. Ordering is not dependency
 
@@ -9,7 +17,7 @@ Two independent columns/concepts, never conflated:
 | | Stored as | Means | Affects availability? |
 | --- | --- | --- | --- |
 | **Order** | `position int` on the child row | where it renders in the list | **No** |
-| **Dependency** | a row in `*_prerequisites` | what must be finished first | **Yes** |
+| **Dependency** | a row in `lesson_prerequisites` | what must be finished first | **Yes** |
 
 So this is legal and meaningful:
 
@@ -20,16 +28,14 @@ position 3  Lesson "Cú pháp"             no prerequisites   → available imme
 position 4  Lesson "Vòng lặp"            requires 3         → locked until 3 done
 ```
 
-A learner sees them in authored order but may legitimately start with #1 or #3.
+In practice `learning-service` never authors this shape by hand — see §3.
 
 ## 2. The edge
 
-Every prerequisite table has the same three meaningful columns:
-
 ```sql
-target_id     -- the thing being gated
-source_id     -- the thing that must be completed first
-group_index   -- smallint, default 0
+target_lesson_id  -- the lesson being gated
+source_lesson_id  -- the lesson that must be completed first
+group_index        -- smallint, default 0
 ```
 
 Read as: *"`target` requires `source`"*. The edge points **from prerequisite to dependent**.
@@ -42,7 +48,7 @@ Different groups are ORed.
 ```
 
 `target` is unlocked when **at least one group is fully satisfied**. This covers every case the
-product needs, and every case it might need, with one `smallint`:
+product might need with one `smallint`:
 
 | Requirement | Rows `(source, group_index)` |
 | --- | --- |
@@ -50,18 +56,13 @@ product needs, and every case it might need, with one `smallint`:
 | Only A | `(A,0)` |
 | A **and** B | `(A,0), (B,0)` |
 | A **or** B | `(A,0), (B,1)` |
-| (A **and** B) **or** C | `(A,0), (B,0), (C,1)` |
-| (A **or** B) **and** C | `(A,0),(C,0), (B,1),(C,1)` |
 
-The last row shows the cost of DNF: a conjunction of disjunctions has to be expanded. That is an
-acceptable trade — the alternative is an expression tree (`AND`/`OR`/`NOT` nodes with parent
-pointers), which triples the query complexity to buy an expressiveness the product has never asked
-for. DNF is stored flat, evaluated with one aggregate query, and can be migrated to a tree later
-without discarding data. See `04-design-decisions.md §3`.
+`learning-service` only ever writes the "no prerequisite" and "A and B..." shapes — order-derived
+edges are always a single group. Nothing in the app writes a second `group_index` for the same
+target, so the OR half of this mechanism is schema-capable but currently unreached. See
+`04-design-decisions.md §3` for why DNF was chosen over an expression tree regardless.
 
 ### 2.2 Availability query
-
-The same shape at every level (lessons shown):
 
 ```sql
 -- Is lesson L available to user U?
@@ -81,8 +82,8 @@ SELECT
 ```
 
 `postgres/migrations/0011_availability_functions.sql` ships this as
-`fn_lesson_available(user_id, lesson_id)` plus the equivalents for chapters, courses, roadmap
-courses and exercises, so the API layer never re-implements the rule.
+`fn_lesson_available(user_id, lesson_id)` — the only `fn_*_available` function left after 0021, and
+the one `prisma-enrollment.repository.ts` calls.
 
 ### 2.3 Progression mode gates whether edges are enforced
 
@@ -90,63 +91,26 @@ Edges describe *structure*; mode decides whether that structure is **enforced** 
 
 | Mode | Behaviour |
 | --- | --- |
-| `free` | all content available; prerequisites are advisory (shown as "recommended first") |
-| `graph` | the DNF prerequisite edges are evaluated — supports branching, AND, OR |
+| `free` | all content available; prerequisites are advisory |
+| `graph` | the DNF prerequisite edges are evaluated |
 | `linear` | **`position` itself is the gate**: every earlier non-optional sibling must be completed. Edges are ignored, and none need to be authored |
 
-`linear` is not "graph with a tidy shape" — it is a different rule, which is why a purely
-sequential curriculum needs zero edge rows (see the *Nhập môn Lập trình* roadmap in the seed).
-
 Resolution order for a learner: `enrollment.mode_override` → falls back to the container's
-`progression_mode`. This is how one dataset serves both constrained and unconstrained learning
-**without duplicating any content** — the requirement in §7 of the brief.
+`progression_mode`.
 
-## 3. Per-level application
+`progression_mode` is still a column on `roadmaps`, `courses`, `chapters` (via the course) and
+`exercise_sets` — the enum itself wasn't touched by 0021. But since `roadmap_course_prerequisites`,
+`course_prerequisites`, `chapter_prerequisites` and `exercise_prerequisites` no longer exist, setting
+`'graph'` at any of those levels has no edges to evaluate even in principle — nothing computes
+per-course/chapter/exercise availability today (`fn_chapter_available`, `fn_course_available`,
+`fn_roadmap_course_available`, `fn_exercise_available` were the functions that would have; they're
+gone too). Only lesson-level `'graph'` mode does anything.
 
-### 3.1 Roadmap → Course
+## 3. Lesson-level application — the one live level
 
-Edges reference `roadmap_courses.id` (the membership row), **not** `courses.id`, so gating is
-per-roadmap.
-
-```
-Roadmap "Backend Java"  progression_mode = 'graph'
-  rc1 Java Core ──┬──▶ rc2 SQL cơ bản ──┐
-                  └─────────────────────┴─(group 0: AND)──▶ rc3 Spring Boot ──▶ rc4 Dự án
-
-Roadmap "Nhập môn"      progression_mode = 'linear'
-  rc8 Tư duy    rc9 Lập trình C    rc10 Cấu trúc dữ liệu     (no edges — position gates)
-
-Roadmap "Frontend"      progression_mode = 'free'
-  rc5 HTML      rc6 CSS            rc7 JavaScript            (no edges — nothing gates)
-```
-
-Constraint: both endpoints must belong to the **same roadmap**, enforced by the composite
-foreign key on `(roadmap_id, roadmap_course_id)`.
-
-### 3.2 Course → Course (intrinsic)
-
-Independent of any roadmap. Supports multiple prerequisites:
-
-```
-Java Core ──┐
-            ├─(group 0: AND)──▶ Spring Boot REST API
-SQL Basics ─┘
-```
-
-### 3.3 Chapter
-
-Scoped to one course. Typically linear, but branching is representable:
-
-```
-Ch1 Cú pháp ──┬──▶ Ch2 OOP
-              ├──▶ Ch3 Collections
-              └──▶ Ch4 File I/O          (Ch2/3/4 independent after Ch1)
-```
-
-### 3.4 Lesson — branching required
-
-Scoped to one course (cross-chapter edges within a course are allowed; cross-course is rejected).
-This is the case the brief calls out explicitly: `order` alone cannot express it.
+`saveCurriculum` (learning-service) derives edges from curriculum order every time a course's
+curriculum is saved (`deriveLessonSources`, `domain/model/curriculum.ts`), then switches the course
+to `progression_mode = 'graph'` so `fn_lesson_available` actually evaluates them:
 
 ```
 Lesson 1 "Biến & kiểu dữ liệu"
@@ -158,7 +122,9 @@ Lesson 1 "Biến & kiểu dữ liệu"
 After L1, all of L2–L5 unlock and may be completed in any order.
 ```
 
-Combined with a join:
+Combined with a join — lesson N needs lesson N-1 *in the same chapter*; the first lesson of a new
+chapter needs **every** lesson of the chapter before it (not just the last one), because a mid-chapter
+lesson may itself be marked `isPreview`/`skipOrder` and break the chain:
 
 ```
 Lesson 3 ──┐
@@ -166,24 +132,9 @@ Lesson 3 ──┐
 Lesson 5 ──┘
 ```
 
-### 3.5 Exercise — set-scoped
-
-Exercise edges carry a `set_id`. The **same exercise** is therefore free-choice in the global
-catalogue and gated inside a curated track, with no duplication:
-
-```
-Set "Nhập môn thuật toán"  progression_mode='graph'
-
-  E1 Tìm kiếm tuyến tính
-   ├──▶ E2 Tìm kiếm nhị phân ──▶ E5 Tìm nghiệm bằng chia đôi
-   └──▶ E3 Sắp xếp nổi bọt   ──▶ E4 Sắp xếp trộn
-
-Set "Top 100 phỏng vấn"    progression_mode='free'
-  E1 E2 E3 E4 E5   (same exercises, no edges → all available)
-```
-
-A learner may additionally set `exercise_set_enrollments.progression_mode_override = 'free'` on the
-first set to opt out of gating — the user-selectable toggle the brief asks for.
+A lesson flagged "cho học trước" (`skipOrder`) gets no incoming edges at all — open regardless of
+what precedes it. This is scoped to one course (cross-chapter edges within a course are allowed;
+cross-course is rejected by a composite FK).
 
 ## 4. Validation
 
@@ -191,20 +142,16 @@ Enforced in the database, not assumed from the frontend.
 
 | Invalid case | Mechanism |
 | --- | --- |
-| Self-reference (`A → A`) | `CHECK (source_id <> target_id)` |
-| Duplicate edge | `PRIMARY KEY (target_id, source_id, group_index)` |
+| Self-reference (`A → A`) | `CHECK (source_lesson_id <> target_lesson_id)` |
+| Duplicate edge | `PRIMARY KEY (target_lesson_id, source_lesson_id, group_index)` |
 | Missing entity | `FOREIGN KEY … ON DELETE CASCADE` |
 | **Cycle** | `BEFORE INSERT OR UPDATE` trigger running a recursive reachability probe |
-| Cross-scope (lesson in another course) | **composite FK** `(course_id, lesson_id) → lessons(course_id, id)` |
-| Cross-roadmap (roadmap_course edge) | **composite FK** `(roadmap_id, rc_id) → roadmap_courses(roadmap_id, id)` |
-| Exercise edge outside its set | **composite FK** into `exercise_set_items(set_id, exercise_id)` |
-| Prerequisite on archived content | trigger checking `status <> 'archived'` |
+| Cross-course edge | **composite FK** `(course_id, lesson_id) → lessons(course_id, id)` |
 | Negative / sparse `group_index` | `CHECK (group_index >= 0)` |
 
-Only the last two need triggers. Scope is enforced declaratively by carrying the scope column
-on the edge row and pointing a composite foreign key at a `(scope, id)` unique constraint — no
-procedural code, and impossible to bypass. `lessons.course_id` is denormalised for this purpose
-and is itself held true by a composite FK to `chapters(course_id, id)`.
+Scope is enforced declaratively by carrying `course_id` on the edge row and pointing a composite
+foreign key at a `(course_id, id)` unique constraint on `lessons` — no procedural code, and
+impossible to bypass.
 
 ### 4.1 Cycle detection
 
@@ -224,7 +171,10 @@ SELECT 1 FROM reachable WHERE id = source_id_being_inserted;
 
 If that returns a row → `RAISE EXCEPTION 'circular dependency'`. The probe is `UNION` (not
 `UNION ALL`), so an existing cycle cannot make it loop forever. Cost is bounded by the number of
-edges in one course/set, which is small by construction.
+edges in one course, which is small by construction. `fn_prevent_dependency_cycle` is generic
+(parameterised by table/column names) and was originally reused by all five levels; it's kept for
+`lesson_prerequisites` alone now — the trigger on the other four tables went with those tables in
+0021.
 
 This catches indirect cycles, not just `A→B→A`:
 
@@ -232,16 +182,21 @@ This catches indirect cycles, not just `A→B→A`:
 A → B → C → A     rejected when C → A is inserted
 ```
 
+In practice `deriveLessonSources` only ever emits edges that point strictly forward through
+curriculum order, so it can't produce a cycle itself — this guard exists for direct writes, not
+because the derivation needs it.
+
 ## 5. Worked example — the seed data
 
-`postgres/seed/0001_seed.sql` builds all four shapes so the model can be inspected without
-authoring content:
+`postgres/seed/0001_seed.sql` still builds the lesson-level shapes:
 
 | Shape | Where in seed |
 | --- | --- |
-| Linear | Roadmap *Backend Java*: 4 courses chained |
 | Branching | Course *Java Core*, Chapter 1: L1 → {L2, L3, L4} |
-| Unconstrained | Roadmap *Frontend Developer* (`progression_mode='free'`, zero edges) |
-| Multiple prereqs (AND) | Course *Spring Boot REST API* requires *Java Core* **and** *SQL cơ bản* |
-| Alternative prereqs (OR) | Exercise *Rate limiter* requires *JWT guard* **or** *API pagination* |
-| Mode override | user `an@` sets *Nhập môn thuật toán* to `free` |
+| AND join, cross-chapter | L2 **and** L3 → L5 "Class và Object" (start of chapter 2) |
+| Linear (no edges) | Roadmap *Nhập môn Lập trình*: `progression_mode='linear'`, position gates instead |
+
+The roadmap/course/chapter/exercise AND-OR examples that used to live here (Spring Boot needing
+Java Core *and* SQL, the rate-limiter exercise needing the JWT guard *or* API pagination, the
+branching roadmap-course graph) were removed along with their tables in `0021` — they were seed-only
+demonstrations of a mechanism the application never authored through.

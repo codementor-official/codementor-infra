@@ -133,11 +133,11 @@ Cạnh của "Class và Object":  (Kiểu dữ liệu, group 0)
 → group 0 là AND  →  phải hoàn thành CẢ HAI
 ```
 
-```
-Cạnh của "Rate limiter":     (JWT guard,      group 0)
-                             (API pagination, group 1)
-→ hai group khác nhau là OR  →  chỉ cần MỘT
-```
+OR (hai `group_index` khác nhau trên cùng target) là một phần cơ chế nhưng không có cạnh thật nào
+dùng tới nó: `deriveLessonSources` (learning-service) luôn sinh đúng một group cho mỗi bài, suy từ
+thứ tự chương/bài — xem `02-dependency-model.md §2.1`. Ví dụ "Rate limiter cần JWT guard HOẶC API
+pagination" từng minh hoạ OR ở cấp exercise, nhưng bảng `exercise_prerequisites` và
+`fn_exercise_available` đã bị xoá ở `0021` (chưa từng có caller ứng dụng).
 
 **Quy tắc nghiệp vụ**
 
@@ -243,7 +243,14 @@ Hiện thực trực tiếp yêu cầu *"hỗ trợ cả học tuần tự lẫn
 | **Tiền điều kiện** | Hai đối tượng cùng phạm vi (cùng khoá / cùng lộ trình / cùng bộ) |
 | **Hậu điều kiện** | Cạnh được ghi, hoặc bị từ chối kèm lý do; đồ thị luôn là DAG |
 
-**Luồng chính**
+**Hiện trạng:** đặc tả bên dưới mô tả thiết kế gốc (5 cấp). `0021_drop_unused_prerequisite_graph.sql`
+đã xoá 4/5 bảng `*_prerequisites` (chapter/course/roadmap_course/exercise) và các hàm
+`fn_*_available` tương ứng vì chưa từng có usecase/DTO nào ghi vào — không lecturer studio nào có
+UI đặt điều kiện tiên quyết kiểu đồ thị. Cấp còn sống duy nhất là **bài học**, và ở đó cạnh được
+**suy tự động** từ thứ tự chương/bài (`deriveLessonSources`) khi lưu curriculum — không có luồng
+"quản trị viên tự chọn quan hệ logic" nào chạy trong ứng dụng. Xem `02-dependency-model.md`.
+
+**Luồng chính (thiết kế gốc, không còn hiện thực ngoài lesson)**
 
 1. Quản trị viên chọn đối tượng cần đặt điều kiện (bài học / chương / khoá / bài tập).
 2. Chọn một hoặc nhiều đối tượng tiên quyết.

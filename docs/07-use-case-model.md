@@ -252,7 +252,7 @@ Learner --> UC27
 | Mã | Use case | Quan hệ | Dữ liệu / hiện thực |
 | --- | --- | --- | --- |
 | UC-20 | Học bài (mở lesson) | «include» UC-21 | `lessons`, Mongo `lesson_contents` |
-| UC-21 | **Kiểm tra điều kiện mở khoá** | *(included)* | `fn_lesson_available()` — thay thế hoàn toàn cờ `isLocked` cũ |
+| UC-21 | **Kiểm tra điều kiện mở khoá** | *(included)* | `fn_lesson_available()` — thay thế hoàn toàn cờ `isLocked` cũ. Chỉ còn cấp lesson: `fn_chapter_available` bị xoá ở `0021` (chưa có caller) |
 | UC-22 | Đánh dấu hoàn thành bài học | «include» UC-23 | `lesson_progress.status='completed'` |
 | UC-23 | **Cập nhật tiến độ học tập** | *(included)* | trigger `fn_refresh_course_progress` → `fn_refresh_roadmap_progress` |
 | UC-24 | Tiếp tục bài đang học dở | «extend» UC-20 — *đk: tồn tại lesson `in_progress`* | `idx_lesson_progress_active` |
@@ -321,7 +321,7 @@ UC38 --> AI
 | --- | --- | --- | --- |
 | UC-30 | Xem danh sách bài tập | | `exercises`, `exercise_set_items` |
 | UC-31 | Chọn chế độ luyện tập | «extend» UC-32 — *đk: học viên đổi chế độ* | `exercise_set_enrollments.progression_mode_override` |
-| UC-32 | **Kiểm tra điều kiện mở bài tập** | *(included)* | `fn_exercise_available(user, set, exercise)` |
+| UC-32 | **Kiểm tra điều kiện mở bài tập** | *(included)* | `fn_exercise_available(user, set, exercise)` — hàm và bảng `exercise_prerequisites` đã bị xoá ở `0021` (không có caller); luyện tập hiện không gác theo bài trước |
 | UC-33 | Giải bài trong workspace | «include» UC-32 | Mongo `exercise_contents` |
 | UC-34 | Chạy thử code | «include» UC-36 | chỉ chạy test `visibility='public'` |
 | UC-35 | Nộp bài | «include» UC-36 | `submissions` |
@@ -395,8 +395,8 @@ UC43 --> AI
 | UC-44 | Xuất bản nội dung | Quản trị viên, Học viên¹ | «include» UC-45 | `status='published'` |
 | UC-45 | **Kiểm tra tính đầy đủ** | *(included)* | | CHECK `status<>'published' OR content_ref IS NOT NULL` |
 | UC-46 | Xây dựng khoá học | Quản trị viên | | `chapters`, `lessons` |
-| UC-47 | Thiết lập điều kiện tiên quyết | Quản trị viên | «include» UC-48 | 5 bảng `*_prerequisites` |
-| UC-48 | **Kiểm tra chu trình phụ thuộc** | *(included)* | | trigger `fn_prevent_dependency_cycle` |
+| UC-47 | Thiết lập điều kiện tiên quyết | Quản trị viên | «include» UC-48 | Chỉ còn `lesson_prerequisites` sống — 4/5 bảng `*_prerequisites` bị xoá ở `0021` vì chưa từng có usecase/DTO nào ghi vào |
+| UC-48 | **Kiểm tra chu trình phụ thuộc** | *(included)* | | trigger `fn_prevent_dependency_cycle`, nay chỉ còn gắn trên `lesson_prerequisites` |
 | UC-49 | Gửi duyệt & duyệt nội dung | Quản trị viên | | `exercise_status` (`pending_review` → `published`/`changes_requested`/`rejected`) |
 
 ¹ **Tiền điều kiện phân biệt phạm vi**, không phải actor: `owner_group_id IS NULL` → catalog chung
@@ -678,19 +678,19 @@ Bảng này chứng minh mọi use case đều có chỗ dựa dữ liệu — v
 | UC-15 | `learning_preferences`, `roadmap_technologies` | | |
 | UC-16 | `roadmap_enrollments`, `course_enrollments` | | |
 | UC-20 | `lessons` | `lesson_contents` | |
-| **UC-21** | `lesson_prerequisites`, `chapter_prerequisites` | | `fn_lesson_available`, `fn_chapter_available` |
+| **UC-21** | `lesson_prerequisites` | | `fn_lesson_available` (`chapter_prerequisites`/`fn_chapter_available` removed, `0021`) |
 | UC-22, 23 | `lesson_progress` | | `fn_refresh_course_progress`, `fn_refresh_roadmap_progress` |
 | UC-26 | `course_enrollments.mode_override` | | |
 | UC-27 | `course_reviews` | | `fn_on_course_review_change` |
 | UC-30 | `exercises`, `exercise_set_items` | | |
 | UC-31 | `exercise_set_enrollments` | | |
-| **UC-32** | `exercise_prerequisites` | | `fn_exercise_available` |
+| **UC-32** | ~~`exercise_prerequisites`~~ removed, `0021` | | ~~`fn_exercise_available`~~ removed, `0021` |
 | UC-33, 38 | | `exercise_contents` | |
 | UC-34…37 | `submissions`, `exercise_progress` | `submission_run_details` | |
 | UC-40…43 | `exercises`, `exercise_tags` | `exercise_contents` | |
 | UC-44, 45 | | | CHECK `exercises_published_needs_content` |
 | UC-46 | `chapters`, `lessons` | | `fn_on_curriculum_change` |
-| **UC-47, 48** | 5 bảng `*_prerequisites` | | `fn_prevent_dependency_cycle` |
+| **UC-47, 48** | `lesson_prerequisites` (4/5 bảng `*_prerequisites` removed, `0021`) | | `fn_prevent_dependency_cycle` |
 | UC-50…52 | `study_groups`, `group_members` | | `fn_on_group_member_change` |
 | UC-53…55 | `group_documents` | | |
 | UC-56…58 | `group_exercises`, `assignments`, `submissions` | | |

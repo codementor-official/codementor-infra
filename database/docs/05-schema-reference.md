@@ -2,6 +2,14 @@
 
 > Sinh tự động từ database đang chạy bằng `scripts/dump-catalog.sh` + `scripts/gen-schema-doc.js`.
 > **Không sửa tay** — chạy lại generator sau mỗi migration.
+>
+> **Đang cũ hơn schema thật:** `make schema-doc` hiện lỗi ở bước generator (`gen-schema-doc.js`
+> báo "thiếu mô tả cho bảng: audit_logs, outbox, processed_events" — lỗi có trước, không liên quan
+> tới thay đổi này) nên chưa regenerate được sau `0021_drop_unused_prerequisite_graph.sql`. File
+> này vẫn còn liệt kê `roadmap_course_prerequisites`, `course_prerequisites`,
+> `chapter_prerequisites`, `exercise_prerequisites` — 4 bảng đó **đã bị xoá**. Xem
+> `02-dependency-model.md` cho hiện trạng thật; sửa `gen-schema-doc.js` rồi chạy lại generator để
+> file này đúng lại.
 
 PostgreSQL: **44 bảng**, **75 khoá ngoại**, **79 ràng buộc CHECK**.
 

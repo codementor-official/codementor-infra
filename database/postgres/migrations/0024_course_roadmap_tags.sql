@@ -1,4 +1,4 @@
--- 0023 — chủ đề cho khóa học và lộ trình.
+-- 0024 — chủ đề cho khóa học và lộ trình.
 --
 -- `exercise_tags` đã có, `course`/`roadmap` thì không: hai loại nội dung lớn nhất trong
 -- catalog không nói được chúng dạy về cái gì, ngoài `field` (sáu giá trị) và `level`.

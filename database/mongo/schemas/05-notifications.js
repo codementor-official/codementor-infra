@@ -47,6 +47,12 @@ const schema = {
         // Admin từ chối một yêu cầu xin gỡ — nội dung vẫn công khai như cũ, tác giả cần biết
         // để không tưởng nhầm là nó đã được gỡ.
         "REMOVAL_REQUEST_DENIED",
+        "WORKSPACE_JOIN_APPROVED",
+        "WORKSPACE_JOIN_REJECTED",
+        "WORKSPACE_ASSIGNMENT_CREATED",
+        "WORKSPACE_ASSIGNMENT_DUE_SOON",
+        "WORKSPACE_ASSIGNMENT_OVERDUE",
+        "WORKSPACE_MESSAGE",
       ],
     },
 
@@ -66,7 +72,7 @@ const schema = {
     audienceKey: { bsonType: ["string", "null"] },
 
     // What the notification points at. Null for admin announcements, which reference nothing.
-    referenceType: { enum: ["COURSE", "EXERCISE", "ROADMAP", "POST", null] },
+    referenceType: { enum: ["COURSE", "EXERCISE", "ROADMAP", "POST", "WORKSPACE", null] },
     referenceId: { bsonType: ["string", "null"] },
 
     // The call to action, resolved when the notification is built. Storing the URL rather than

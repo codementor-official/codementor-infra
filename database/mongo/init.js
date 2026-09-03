@@ -17,6 +17,7 @@ const modules = [
   "mongo/schemas/04-article-contents.js",
   "mongo/schemas/05-notifications.js",
   "mongo/schemas/06-notification-reads.js",
+  "mongo/schemas/07-ai-rag.js",
 ];
 
 print(`\n== codementor mongo init → ${targetDb} ==`);
@@ -24,7 +25,7 @@ print(`\n== codementor mongo init → ${targetDb} ==`);
 for (const path of modules) {
   // Each schema file leaves `apply` in scope when loaded by mongosh.
   load(path);
-  const name = apply(database); // eslint-disable-line no-undef
+  const name = await apply(database); // eslint-disable-line no-undef
   const count = database.getCollection(name).getIndexes().length;
   print(`  ✓ ${name.padEnd(24)} validator applied, ${count} indexes`);
 }

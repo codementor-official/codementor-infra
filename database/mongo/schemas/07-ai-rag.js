@@ -5,9 +5,13 @@ const definitions = [
     name: "ai_document_indexes",
     schema: {
       bsonType: "object",
-      required: ["_id", "workspaceId", "documentId", "model", "source", "state", "chunks", "updatedAt", "leaseUntil"],
+      required: ["_id", "scope", "documentId", "model", "source", "state", "chunks", "updatedAt", "leaseUntil"],
       properties: {
-        _id: { bsonType: "string" }, workspaceId: { bsonType: "string" }, documentId: { bsonType: "string" },
+        // `<kind>:<id>` — "workspace:{uuid}" hoặc "lecturer:{sub}". Trước đây là `workspaceId`,
+        // và đó chính là thứ khoá tầng index vào một nghiệp vụ: khoá index, bộ lọc và nhánh S3
+        // đều suy từ nó. Hàng cũ không cần backfill — khoá `_id` đã lên `:v2` nên chúng không
+        // bao giờ khớp nữa và TTL 30 ngày dọn nốt.
+        _id: { bsonType: "string" }, scope: { bsonType: "string" }, documentId: { bsonType: "string" },
         model: { bsonType: "string" }, source: { bsonType: "object" },
         state: { enum: ["queued", "processing", "ready", "failed"] },
         chunks: { bsonType: "array", maxItems: 160, items: {
@@ -24,7 +28,7 @@ const definitions = [
     },
     indexes: [
       [{ model: 1, state: 1, updatedAt: 1 }, { name: "ai_index_queue" }],
-      [{ workspaceId: 1, documentId: 1 }, { name: "ai_index_workspace_document" }],
+      [{ scope: 1, documentId: 1 }, { name: "ai_index_scope_document" }],
       [{ expiresAt: 1 }, { name: "ai_index_expiry", expireAfterSeconds: 0 }],
     ],
   },

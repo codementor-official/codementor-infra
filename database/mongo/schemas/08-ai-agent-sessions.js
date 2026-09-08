@@ -18,9 +18,17 @@ const definitions = [
       properties: {
         // `${agentId}:${threadId}` — threadId do trình duyệt sinh, agentId nằm trong khoá để hai
         // agent không đụng nhau nếu cùng một threadId được dùng lại.
+        // `${agentId}:${threadId}`, hoặc `${agentId}:${workspaceId}:${threadId}` với bề mặt
+        // nhóm học: một người ở hai nhóm phải thấy hai danh sách rời nhau, và cùng một
+        // `threadId` ở hai nhóm không được trỏ về một bản ghi.
         _id: { bsonType: "string", maxLength: 128 },
         userId: { bsonType: "string" },
-        agentId: { bsonType: "string", enum: ["lecter", "codey"] },
+        agentId: { bsonType: "string", enum: ["lecter", "lecter_workspace", "codey"] },
+        // Chỉ có ở bề mặt nhóm học. Đi cùng `userId` trong mọi truy vấn — bỏ một trong hai là
+        // hội thoại của nhóm khác lọt vào danh sách.
+        workspaceId: { bsonType: "string" },
+        // Thread thật, tách khỏi `_id`: đọc bằng cách cắt chuỗi thì thêm một đoạn khoá là hỏng.
+        threadId: { bsonType: "string" },
         title: { bsonType: "string", maxLength: 120 },
         messages: { bsonType: "array", maxItems: 400, items: { bsonType: "object" } },
         createdAt: { bsonType: "date" },
@@ -30,6 +38,10 @@ const definitions = [
     },
     indexes: [
       [{ userId: 1, agentId: 1, updatedAt: -1 }, { name: "ai_agent_session_history" }],
+      [
+        { userId: 1, agentId: 1, workspaceId: 1, updatedAt: -1 },
+        { name: "ai_agent_session_workspace_history" },
+      ],
       // 90 ngày: đây là thứ người dùng quay lại đọc, không phải cache như `ai_document_indexes`
       // (30 ngày) — nhưng vẫn có hạn để hội thoại bỏ quên không nằm lại vô thời hạn.
       [{ expiresAt: 1 }, { name: "ai_agent_session_expiry", expireAfterSeconds: 0 }],

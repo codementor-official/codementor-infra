@@ -103,7 +103,12 @@ codementor-infra/
 └── README.md
 ```
 
-Some directories may initially contain only documentation or configuration placeholders. They are intentionally separated to provide a consistent structure as the project grows.
+**The tree above is the target shape, not what exists today.** As of 2026-09-16 the repository
+contains `database/`, `docker/`, a root `docs/` (use-case models and rendered diagrams) and a root
+`scripts/` (diagram rendering). `k8s/`, `cicd/` and `monitoring/` have not been created.
+
+The root `docs/` and `scripts/` predate the one-folder-per-area rule stated below and are the
+documented exception to it. Do not add to them; new documentation goes in its area's `docs/`.
 
 Conventions for every top-level area:
 
@@ -544,16 +549,6 @@ Infrastructure should remain simple at the current stage while providing a clear
 
 # Current Scope
 
-The current focus is:
-
-```text
-Database Foundation
-        │
-        ├── PostgreSQL
-        │
-        └── MongoDB
-```
-
 The infrastructure repository will progressively expand toward:
 
 ```text
@@ -623,16 +618,23 @@ Steps 3–6 are driven from the root `Makefile` (`make up`, `make init`, `make s
 
 # Status
 
-| Component     | Status                    |
-| ------------- | ------------------------- |
-| PostgreSQL    | 🚧 Initial implementation |
-| MongoDB       | 🚧 Initial implementation |
-| Docker        | Planned / In progress     |
-| CI/CD         | Planned                   |
-| Kubernetes    | Planned                   |
-| Monitoring    | Planned                   |
-| Operations    | Planned                   |
-| Documentation | In progress               |
+Updated 2026-09-16.
+
+| Component | Status |
+| --- | --- |
+| PostgreSQL | ✅ Deployed on EC2, 29 migrations applied, holding real data |
+| MongoDB | ✅ Deployed on EC2, holding real data |
+| Keycloak | ✅ Deployed, behind Nginx + Let's Encrypt at `id.codementor.cloud` |
+| Docker (`docker/`) | ✅ Compose stack + bootstrap/migrate/realm/verify scripts |
+| Kafka, Kong | ❌ Not in this repo — run from `codementor-backend/docker-compose.yml` on the dev machine only |
+| Terraform / Ansible | ❌ Not written |
+| CI/CD | ❌ Not written — no `.github/workflows/` in any of the three repositories |
+| Kubernetes | ❌ Not started, and out of scope for the thesis |
+| Monitoring | ❌ Not started |
+| Backups | ❌ **None.** No `pg_dump` or `mongodump` runs anywhere; the data on the EC2 host exists in one copy |
+
+The backup row is the one to act on first. Everything else is a missing feature; that one is a
+single instance failure away from losing the project's data.
 
 ---
 

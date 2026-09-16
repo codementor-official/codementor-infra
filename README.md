@@ -99,7 +99,6 @@ codementor-infra/
 │
 ├── Makefile
 ├── CLAUDE.md
-├── .env.example
 └── README.md
 ```
 
@@ -461,13 +460,9 @@ Infrastructure decisions that are not obvious from configuration should be docum
 
 Environment-specific configuration must not be hard-coded into infrastructure files.
 
-Use:
-
-```text
-.env.example
-```
-
-as a template for required variables.
+Each area keeps its own template — `docker/.env.example`, `database/.env.example` — listing every
+variable that area needs. There is no repository-wide `.env.example`; copy the one belonging to
+the area you are running.
 
 Sensitive values such as:
 

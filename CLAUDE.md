@@ -21,7 +21,7 @@ codementor-infra/
 
 Currently implemented:
 
-- `database/` — PostgreSQL migrations (30, append-only) + MongoDB schemas and seed.
+- `database/` — PostgreSQL migrations (31, append-only) + MongoDB schemas and seed.
 - `docker/` — the deployed EC2 stack: PostgreSQL 18, MongoDB 7, Keycloak 26.7.0, plus the
   bootstrap/migrate/realm/verify scripts. This is running in production on
   `13.214.122.227` (AWS account `416069841933`, ap-southeast-1, t3.small).

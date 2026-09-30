@@ -1,5 +1,6 @@
 # Environment-specific secrets
 **/.env
+**/.env.*
 !**/.env.example
 
 # Local deployment artifacts

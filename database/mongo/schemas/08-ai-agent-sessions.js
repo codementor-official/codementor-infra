@@ -1,4 +1,4 @@
-// Lịch sử hội thoại của agent (Lecter, và sau này Codey). Owned by ai-service (Python).
+// Lịch sử hội thoại của agent (Lecter, Codey, Tutor). Owned by ai-service (Python).
 // This definition is also consumed by codementor-backend/scripts/migrate-ai.mjs.
 //
 // Tách khỏi `ai_conversations` (07) có chủ đích: validator ở đó bắt mọi turn phải mang
@@ -23,7 +23,7 @@ const definitions = [
         // `threadId` ở hai nhóm không được trỏ về một bản ghi.
         _id: { bsonType: "string", maxLength: 128 },
         userId: { bsonType: "string" },
-        agentId: { bsonType: "string", enum: ["lecter", "lecter_workspace", "codey"] },
+        agentId: { bsonType: "string", enum: ["lecter", "lecter_workspace", "codey", "tutor"] },
         // Chỉ có ở bề mặt nhóm học. Đi cùng `userId` trong mọi truy vấn — bỏ một trong hai là
         // hội thoại của nhóm khác lọt vào danh sách.
         workspaceId: { bsonType: "string" },
@@ -31,6 +31,14 @@ const definitions = [
         threadId: { bsonType: "string" },
         title: { bsonType: "string", maxLength: 120 },
         messages: { bsonType: "array", maxItems: 400, items: { bsonType: "object" } },
+        // Chỉ Tutor ghi. Khoá là id tin nhắn của NGƯỜI DÙNG (trình duyệt sinh, ổn định qua mọi
+        // lần phát lại), giá trị là lượt đã đối chiếu trích dẫn — cùng hình dạng một turn của
+        // `ai_conversations` cũ, nên script migrate chép thẳng sang. Server là nguồn sự thật:
+        // endpoint đọc lại trường này từ đây, không tin bản trình duyệt gửi lên.
+        grounding: { bsonType: "object" },
+        // Tài liệu đang chọn ở lượt gần nhất `[{id, title}]` — chỉ để mở lại hội thoại đúng
+        // lựa chọn cũ. Quyền đọc vẫn kiểm lại ở mỗi lượt.
+        documents: { bsonType: "array", maxItems: 8, items: { bsonType: "object" } },
         createdAt: { bsonType: "date" },
         updatedAt: { bsonType: "date" },
         expiresAt: { bsonType: "date" },

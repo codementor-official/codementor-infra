@@ -33,6 +33,9 @@ const definitions = [
     ],
   },
   {
+    // BẢN CŨ. Hội thoại AI Tutor giờ nằm ở `ai_agent_sessions` (agentId "tutor"); không còn gì
+    // ghi vào đây. Giữ validator để `migrate-tutor-conversations.mjs` đọc được, drop tay sau
+    // khi đã migrate và kiểm tra xong.
     name: "ai_conversations",
     schema: {
       bsonType: "object",

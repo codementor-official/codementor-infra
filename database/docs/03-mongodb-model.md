@@ -101,9 +101,24 @@ Indexes:
   ],
   exerciseBrief: ["Tạo class Book…"],
   media: { provider: "upload", url: "…", durationSeconds: 840, captionsUrl: "…" },
+  attribution: {                       // optional — only for lessons built on third-party work
+    title: "CS50x 2026 — CS50's Introduction to Computer Science",
+    author: "David J. Malan, Harvard University",
+    sourceUrl: "https://cs50.harvard.edu/x/",
+    license: "CC BY-NC-SA 4.0",
+    licenseUrl: "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+    changes: "Chọn lọc bài giảng, sắp xếp lại thành chương…"
+  },
   createdAt, updatedAt
 }
 ```
+
+`attribution` is the credit line Creative Commons licences require (title, author, source,
+licence, what changed); the learner lesson page prints it under the body. It lives on the
+lesson document, not in PostgreSQL, because it is read with the body, never filtered or joined,
+and differs per lesson (one course can mix sources). Absent means the content is our own.
+Paid courses already refuse public-URL video (`saveLessonContent`), which keeps NonCommercial
+sources out of anything sold.
 
 The `blocks` array replaces the frontend's fixed `{heading, paragraphs[]}` + one optional code
 field — the same content, but new block types no longer require a schema change.

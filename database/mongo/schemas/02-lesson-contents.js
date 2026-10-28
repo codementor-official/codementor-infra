@@ -83,6 +83,23 @@ const schema = {
       },
     },
 
+    // Credit line for lessons built on someone else's work (a CS50 lecture, an MIT OCW
+    // video). Creative Commons licences require title, author, source, licence and a note of
+    // what changed; the learner page prints it under the lesson. Absent = our own content.
+    attribution: {
+      bsonType: "object",
+      required: ["title", "author", "sourceUrl", "license", "licenseUrl"],
+      additionalProperties: false,
+      properties: {
+        title: { bsonType: "string" },
+        author: { bsonType: "string" },
+        sourceUrl: { bsonType: "string" },
+        license: { bsonType: "string", description: "display label, e.g. CC BY-NC-SA 4.0" },
+        licenseUrl: { bsonType: "string" },
+        changes: { bsonType: "string" },
+      },
+    },
+
     updatedAt: { bsonType: "date" },
     createdAt: { bsonType: "date" },
   },

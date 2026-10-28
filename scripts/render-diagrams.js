@@ -20,17 +20,17 @@ const CHECK = process.argv.includes("--check");
 
 // Friendly alt text / caption per diagram.
 const TITLES = {
-  "actor-hierarchy": "Sơ đồ kế thừa actor",
-  "package-overview": "Tổng quan các gói chức năng",
-  "p1-account": "P1 — Quản lý tài khoản & cá nhân hoá",
-  "p2-discovery": "P2 — Khám phá & Lộ trình học",
-  "p3-learning": "P3 — Học tập",
-  "p4-practice": "P4 — Luyện tập & Chấm bài",
-  "p5-authoring": "P5 — Soạn & Quản lý nội dung",
-  "p6-groups": "P6 — Nhóm học tập",
-  "p7-ai": "P7 — Trợ lý AI",
-  "p8-admin": "P8 — Quản trị hệ thống",
-  "p9-scheduled": "P9 — Tác vụ tự động",
+  "actor-hierarchy": "Actor inheritance",
+  "package-overview": "Package overview",
+  "p1-account": "P1 — Account & personalisation",
+  "p2-discovery": "P2 — Discovery & learning paths",
+  "p3-learning": "P3 — Learning",
+  "p4-practice": "P4 — Practice & grading",
+  "p5-authoring": "P5 — Content authoring & management",
+  "p6-groups": "P6 — Study groups",
+  "p7-ai": "P7 — AI assistant",
+  "p8-admin": "P8 — System administration",
+  "p9-scheduled": "P9 — Automated tasks",
 };
 
 function render(source) {
@@ -82,7 +82,7 @@ const FENCE = /```plantuml\r?\n([\s\S]*?)```/g;
       const title = TITLES[name] || name;
 
       if (CHECK) {
-        if (!fs.existsSync(svgPath)) stale.push(`${name}.svg thiếu`);
+        if (!fs.existsSync(svgPath)) stale.push(`${name}.svg missing`);
         continue;
       }
 
@@ -99,7 +99,7 @@ const FENCE = /```plantuml\r?\n([\s\S]*?)```/g;
       const replacement =
         `<!-- diagram:${name} -->\n` +
         `![${title}](diagrams/${name}.svg)\n\n` +
-        `<details><summary>Mã nguồn PlantUML — sửa ở đây rồi chạy <code>node scripts/render-diagrams.js</code></summary>\n\n` +
+        `<details><summary>PlantUML source — edit here, then run <code>node scripts/render-diagrams.js</code></summary>\n\n` +
         "```plantuml\n" +
         source +
         "\n```\n\n" +
@@ -115,15 +115,15 @@ const FENCE = /```plantuml\r?\n([\s\S]*?)```/g;
 
   if (CHECK) {
     if (stale.length) {
-      console.error("Sơ đồ chưa được render:\n  " + stale.join("\n  "));
+      console.error("Diagrams not rendered:\n  " + stale.join("\n  "));
       process.exit(1);
     }
-    console.log("✓ mọi sơ đồ đều đã có SVG");
+    console.log("✓ every diagram has an SVG");
     return;
   }
 
-  console.log(`✓ render ${rendered} sơ đồ → ${OUT}/  (nhúng mới: ${wrapped})`);
+  console.log(`✓ rendered ${rendered} diagrams → ${OUT}/  (newly embedded: ${wrapped})`);
 })().catch((e) => {
-  console.error("Lỗi:", e.message);
+  console.error("Error:", e.message);
   process.exit(1);
 });

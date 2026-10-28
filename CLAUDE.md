@@ -21,14 +21,13 @@ codementor-infra/
 
 Currently implemented:
 
-- `database/` — PostgreSQL migrations (31, append-only) + MongoDB schemas and seed.
+- `database/` — PostgreSQL migrations (41, append-only) + MongoDB schemas and seed.
 - `docker/` — the deployed EC2 stack: PostgreSQL 18, MongoDB 7, Keycloak 26.7.0, plus the
   bootstrap/migrate/realm/verify scripts. This is running in production on
   `13.214.122.227` (AWS account `416069841933`, ap-southeast-1, t3.small).
 
 Planned, not written: `k8s/`, `cicd/`, `monitoring/`, `deploy/` (Terraform + Ansible).
-The README still shows those folders in its tree — treat that tree as the target shape, not as
-what exists. `docs/` and `scripts/` at the repo root hold use-case models and diagram tooling;
+The README lists only the folders that exist. `docs/` and `scripts/` at the repo root hold use-case models and diagram tooling;
 they predate the one-folder-per-area rule and are the documented exception to it.
 
 ## Commands

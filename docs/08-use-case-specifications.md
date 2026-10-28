@@ -1,415 +1,427 @@
-# Đặc tả Use Case chi tiết
+# Detailed use case specifications
 
-Đặc tả đầy đủ cho **8 use case trọng yếu** — chọn theo tiêu chí: có `«include»`/`«extend»` thật,
-có quy tắc nghiệp vụ được CSDL cưỡng chế, hoặc là điểm khác biệt của đề tài.
+Full specifications for **8 key use cases**, chosen because they have real `«include»`/`«extend»`
+relationships, carry business rules enforced by the database, or set this project apart.
 
-Các use case còn lại trong [`07-use-case-model.md`](07-use-case-model.md) theo cùng khuôn mẫu ở §0.
+The remaining use cases in [`07-use-case-model.md`](07-use-case-model.md) follow the same template
+as §0.
 
 ---
 
-## 0. Khuôn mẫu đặc tả
+## 0. Specification template
 
-| Mục | Ý nghĩa |
+| Field | Meaning |
 | --- | --- |
-| **Mã / Tên** | Định danh duy nhất |
-| **Actor chính** | Người khởi xướng, có mục tiêu |
-| **Actor phụ** | Hệ thống ngoài được gọi tới |
-| **Tiền điều kiện** | Phải đúng *trước khi* bắt đầu |
-| **Hậu điều kiện** | Đảm bảo đúng *sau khi* kết thúc thành công |
-| **Kích hoạt** | Sự kiện mở màn |
-| **Luồng chính** | Kịch bản thành công |
-| **Luồng thay thế** | Rẽ nhánh vẫn thành công (`3a`, `3b`…) |
-| **Luồng ngoại lệ** | Thất bại (`E1`, `E2`…) |
-| **Quy tắc nghiệp vụ** | Ràng buộc, kèm nơi cưỡng chế |
+| **Code / Name** | Unique identifier |
+| **Primary actor** | Who initiates it, with a goal |
+| **Supporting actor** | External system that is called |
+| **Precondition** | Must hold *before* it starts |
+| **Postcondition** | Guaranteed *after* it ends successfully |
+| **Trigger** | The opening event |
+| **Main flow** | The success scenario |
+| **Alternative flows** | Branches that still succeed (`3a`, `3b`…) |
+| **Exception flows** | Failures (`E1`, `E2`…) |
+| **Business rules** | Constraints, with where they are enforced |
 
 ---
 
-## UC-01 — Đăng ký tài khoản
+## UC-01 — Sign up
 
 | | |
 | --- | --- |
-| **Actor chính** | Khách |
-| **Actor phụ** | Dịch vụ thông báo |
-| **Quan hệ** | `«include»` UC-04 Xác thực email |
-| **Tiền điều kiện** | Chưa đăng nhập |
-| **Hậu điều kiện** | Bản ghi `users` được tạo, `email_verified_at IS NULL` cho tới khi xác thực |
+| **Primary actor** | Guest |
+| **Supporting actor** | Notification service |
+| **Relationship** | `«include»` UC-04 Verify email |
+| **Precondition** | Not signed in |
+| **Postcondition** | A `users` record exists, with `email_verified_at IS NULL` until verified |
 
-**Luồng chính**
+**Main flow**
 
-1. Khách mở trang đăng ký.
-2. Nhập email, mật khẩu, họ tên.
-3. Hệ thống kiểm tra email chưa tồn tại.
-4. Hệ thống băm mật khẩu và tạo bản ghi `users` với `role='learner'`, `status='active'`.
-5. **«include» UC-04** — gửi email xác thực.
-6. Hệ thống thông báo kiểm tra hộp thư.
+1. The guest opens the sign-up page.
+2. Enters email, password and full name.
+3. The system checks the email is not already registered.
+4. The system hashes the password and creates a `users` record with `role='learner'`,
+   `status='active'`.
+5. **«include» UC-04** — sends the verification email.
+6. The system tells the guest to check their inbox.
 
-**Luồng thay thế**
+**Alternative flows**
 
-- *4a.* Khách đăng ký bằng OAuth → `password_hash` để NULL, `email_verified_at` gán ngay.
+- *4a.* The guest signs up through OAuth → `password_hash` stays NULL, `email_verified_at` is set
+  immediately.
 
-**Luồng ngoại lệ**
+**Exception flows**
 
-- *E1.* Email đã tồn tại → báo lỗi, không tiết lộ trạng thái tài khoản *(tránh dò tài khoản)*.
-- *E2.* Gửi email thất bại → tài khoản vẫn được tạo, cho phép gửi lại. **Không** rollback.
+- *E1.* The email already exists → show an error without revealing the account's state
+  *(prevents account enumeration)*.
+- *E2.* Sending the email fails → the account is still created and the email can be resent.
+  **No** rollback.
 
-**Quy tắc nghiệp vụ**
+**Business rules**
 
-| Mã | Quy tắc | Cưỡng chế tại |
+| Code | Rule | Enforced by |
 | --- | --- | --- |
-| BR-01 | Email là duy nhất, không phân biệt hoa thường | `users.email citext UNIQUE` |
-| BR-02 | `handle` chỉ gồm `a-z 0-9 _ -`, 3–30 ký tự | CHECK `users_handle_format` |
-| BR-03 | Tài khoản không bao giờ xoá cứng | quy ước: dùng `status='deleted'` |
+| BR-01 | Email is unique, case-insensitive | `users.email citext UNIQUE` |
+| BR-02 | `handle` uses only `a-z 0-9 _ -`, 3–30 characters | CHECK `users_handle_format` |
+| BR-03 | Accounts are never hard-deleted | convention: use `status='deleted'` |
 
 ---
 
-## UC-20 — Học bài (mở lesson)
+## UC-20 — Study a lesson
 
 | | |
 | --- | --- |
-| **Actor chính** | Học viên |
-| **Quan hệ** | `«include»` UC-21 · được `«extend»` bởi UC-24 |
-| **Tiền điều kiện** | Đã đăng nhập; đã ghi danh khoá học chứa bài |
-| **Hậu điều kiện** | `lesson_progress` tồn tại với `status ∈ {in_progress, completed}` |
+| **Primary actor** | Learner |
+| **Relationship** | `«include»` UC-21 · `«extend»`ed by UC-24 |
+| **Precondition** | Signed in; enrolled in the course containing the lesson |
+| **Postcondition** | `lesson_progress` exists with `status ∈ {in_progress, completed}` |
 
-**Luồng chính**
+**Main flow**
 
-1. Học viên chọn một bài trong danh sách chương.
-2. **«include» UC-21** — hệ thống xác định bài có mở khoá cho học viên này không.
-3. Hệ thống nạp nội dung từ Mongo `lesson_contents` theo `lessons.content_ref`.
-4. Nếu chưa có bản ghi tiến độ → tạo `lesson_progress(status='in_progress', started_at=now())`.
-5. Hiển thị nội dung, mục tiêu bài học và điều hướng bài trước/sau.
+1. The learner picks a lesson from the chapter list.
+2. **«include» UC-21** — the system decides whether the lesson is unlocked for this learner.
+3. The system loads the content from Mongo `lesson_contents` using `lessons.content_ref`.
+4. If there is no progress record yet → create `lesson_progress(status='in_progress',
+   started_at=now())`.
+5. Show the content, the lesson objectives and previous/next navigation.
 
-**Luồng thay thế**
+**Alternative flows**
 
-- *3a.* Bài dạng `video` → khôi phục vị trí xem từ `last_position_seconds`.
-- *3b.* Bài dạng `exercise` và `lessons.exercise_id IS NOT NULL` → mở workspace (chuyển UC-33).
-- *3c.* `content_ref IS NULL` → hiển thị trạng thái "đang biên soạn".
+- *3a.* A `video` lesson → restore the playback position from `last_position_seconds`.
+- *3b.* An `exercise` lesson with `lessons.exercise_id IS NOT NULL` → open the workspace (go to
+  UC-33).
+- *3c.* `content_ref IS NULL` → show an "in preparation" state.
 
-**Luồng ngoại lệ**
+**Exception flows**
 
-- *E1.* UC-21 trả `false` → hiển thị lý do khoá kèm **danh sách bài tiên quyết còn thiếu**, không
-  mở nội dung.
-- *E2.* Không tìm thấy tài liệu Mongo dù `content_ref` có giá trị → báo lỗi nội dung, ghi log.
-  *(Không thể xảy ra với bài đã xuất bản — xem BR-11.)*
+- *E1.* UC-21 returns `false` → show why it is locked, with **the list of missing
+  prerequisites**, and do not open the content.
+- *E2.* The Mongo document is missing although `content_ref` is set → report a content error and
+  log it. *(Cannot happen for published lessons — see BR-11.)*
 
-**Quy tắc nghiệp vụ**
+**Business rules**
 
-| Mã | Quy tắc | Cưỡng chế tại |
+| Code | Rule | Enforced by |
 | --- | --- | --- |
-| BR-10 | Bài `is_preview = true` xem được mà không cần ghi danh | logic ứng dụng |
-| BR-11 | Nội dung đã xuất bản luôn có thân bài | CHECK `..._published_needs_content` |
+| BR-10 | A lesson with `is_preview = true` can be viewed without enrolling | application logic |
+| BR-11 | Published content always has a body | CHECK `..._published_needs_content` |
 
 ---
 
-## UC-21 — Kiểm tra điều kiện mở khoá  *(included)*
+## UC-21 — Check unlock conditions  *(included)*
 
-Use case **quan trọng nhất** của đề tài: thay thế hoàn toàn cờ `isLocked` cũ vốn được gán cứng
-trên dữ liệu và không thể khác nhau giữa các học viên.
+The **most important** use case of the project: it fully replaces the old `isLocked` flag, which
+was hard-coded on the data and could not differ between learners.
 
 | | |
 | --- | --- |
-| **Actor chính** | *(không có — luôn được include)* |
-| **Tiền điều kiện** | Bài học tồn tại |
-| **Hậu điều kiện** | Trả về `true`/`false` + danh sách điều kiện chưa thoả |
+| **Primary actor** | *(none — always included)* |
+| **Precondition** | The lesson exists |
+| **Postcondition** | Returns `true`/`false` + the list of unmet conditions |
 
-**Luồng chính**
+**Main flow**
 
-1. Xác định khoá học chứa bài (`lessons.course_id`).
-2. Xác định **chế độ học hiệu lực**:
+1. Find the course containing the lesson (`lessons.course_id`).
+2. Determine the **effective learning mode**:
    `COALESCE(course_enrollments.mode_override, courses.progression_mode)`.
-3. Rẽ theo chế độ:
+3. Branch on the mode:
 
-| Chế độ | Quy tắc |
+| Mode | Rule |
 | --- | --- |
-| `free` | Trả `true` ngay — mọi bài đều mở |
-| `linear` | Trả `true` khi **mọi bài không tuỳ chọn đứng trước** (theo `chapter.position`, `lesson.position`) đã hoàn thành. **Không đọc bảng cạnh** |
-| `graph` | Trả `true` khi không có cạnh tiên quyết nào, **hoặc** có ít nhất một `group_index` mà **toàn bộ** cạnh trong nhóm đó đã hoàn thành |
+| `free` | Return `true` immediately — every lesson is open |
+| `linear` | Return `true` when **every non-optional lesson before it** (by `chapter.position`, `lesson.position`) is complete. **The edge table is not read** |
+| `graph` | Return `true` when there is no prerequisite edge, **or** at least one `group_index` has **all** of its edges complete |
 
-**Ví dụ đánh giá `graph` (DNF)**
+**`graph` evaluation example (DNF)**
 
 ```
-Cạnh của "Class và Object":  (Kiểu dữ liệu, group 0)
-                             (Toán tử,      group 0)
-→ group 0 là AND  →  phải hoàn thành CẢ HAI
+Edges of "Classes and objects":  (Data types, group 0)
+                                 (Operators,  group 0)
+→ group 0 is an AND  →  BOTH must be complete
 ```
 
-OR (hai `group_index` khác nhau trên cùng target) là một phần cơ chế nhưng không có cạnh thật nào
-dùng tới nó: `deriveLessonSources` (learning-service) luôn sinh đúng một group cho mỗi bài, suy từ
-thứ tự chương/bài — xem `02-dependency-model.md §2.1`. Ví dụ "Rate limiter cần JWT guard HOẶC API
-pagination" từng minh hoạ OR ở cấp exercise, nhưng bảng `exercise_prerequisites` và
-`fn_exercise_available` đã bị xoá ở `0021` (chưa từng có caller ứng dụng).
+OR (two different `group_index` values on the same target) is part of the mechanism, but no real
+edge uses it: `deriveLessonSources` (learning-service) always produces exactly one group per
+lesson, derived from the chapter/lesson order — see `02-dependency-model.md §2.1`. The example
+"Rate limiter needs JWT guard OR API pagination" once illustrated OR at the exercise level, but the
+`exercise_prerequisites` table and `fn_exercise_available` were removed in `0021` (they never had
+an application caller).
 
-**Quy tắc nghiệp vụ**
+**Business rules**
 
-| Mã | Quy tắc | Cưỡng chế tại |
+| Code | Rule | Enforced by |
 | --- | --- | --- |
-| BR-20 | `position` **không** mang ý nghĩa tiên quyết ở chế độ `graph` | thiết kế: hai khái niệm tách bảng |
-| BR-21 | "Hoàn thành" của bài học = `lesson_progress.status='completed'` | `fn_lesson_available` |
-| BR-22 | Bài `is_optional` không chặn tiến độ | mệnh đề `NOT l.is_optional` |
+| BR-20 | `position` carries **no** prerequisite meaning in `graph` mode | design: the two concepts live in separate tables |
+| BR-21 | A lesson is "complete" when `lesson_progress.status='completed'` | `fn_lesson_available` |
+| BR-22 | An `is_optional` lesson does not block progress | the `NOT l.is_optional` clause |
 
-**Hiện thực:** `fn_lesson_available(user_id, lesson_id)` — migration `0011`.
-Kiểm chứng: `postgres/verify.sql` mục B.
+**Implementation:** `fn_lesson_available(user_id, lesson_id)` — migration `0011`.
+Verified by: `postgres/verify.sql` section B.
 
 ---
 
-## UC-26 / UC-31 — Chọn chế độ học có ràng buộc hoặc tự do
+## UC-26 / UC-31 — Choose constrained or free learning
 
-Hiện thực trực tiếp yêu cầu *"hỗ trợ cả học tuần tự lẫn học tự do, không nhân bản nội dung"*.
+Directly implements the requirement *"support both sequential and free learning without
+duplicating content"*.
 
 | | |
 | --- | --- |
-| **Actor chính** | Học viên |
-| **Quan hệ** | `«extend»` UC-21 (bài học) / UC-32 (bài tập) |
-| **Tiền điều kiện** | Đã ghi danh khoá học hoặc bộ bài tập |
-| **Hậu điều kiện** | `mode_override` được ghi; **không** bản ghi nội dung nào bị sửa |
+| **Primary actor** | Learner |
+| **Relationship** | `«extend»` UC-21 (lessons) / UC-32 (exercises) |
+| **Precondition** | Enrolled in the course or the exercise set |
+| **Postcondition** | `mode_override` is written; **no** content record changes |
 
-**Luồng chính**
+**Main flow**
 
-1. Học viên mở tuỳ chọn chế độ học.
-2. Hệ thống hiển thị chế độ mặc định do người tạo nội dung đặt.
-3. Học viên chọn *Tuần tự* / *Theo sơ đồ* / *Tự do*.
-4. Ghi vào `course_enrollments.mode_override` hoặc
+1. The learner opens the learning-mode option.
+2. The system shows the default mode set by the content author.
+3. The learner picks *Sequential* / *Graph* / *Free*.
+4. Write to `course_enrollments.mode_override` or
    `exercise_set_enrollments.progression_mode_override`.
-5. Mọi lần kiểm tra mở khoá sau đó dùng giá trị mới.
+5. Every later unlock check uses the new value.
 
-**Luồng thay thế**
+**Alternative flows**
 
-- *3a.* Chọn "theo mặc định" → ghi `NULL`, kế thừa lại chế độ của nội dung.
+- *3a.* "Use default" is chosen → write `NULL`, inheriting the content's mode again.
 
-**Quy tắc nghiệp vụ**
+**Business rules**
 
-| Mã | Quy tắc | Ghi chú |
+| Code | Rule | Notes |
 | --- | --- | --- |
-| BR-30 | Đổi chế độ **không** ảnh hưởng học viên khác | `mode_override` nằm trên bản ghi ghi danh |
-| BR-31 | Đổi chế độ **không** xoá cạnh tiên quyết | ở `free`, cạnh chỉ còn giá trị gợi ý |
-| BR-32 | Không nhân bản nội dung để phục vụ hai chế độ | cùng một `exercises` xuất hiện ở bộ `graph` và bộ `free` |
+| BR-30 | Changing mode does **not** affect other learners | `mode_override` lives on the enrollment record |
+| BR-31 | Changing mode does **not** delete prerequisite edges | in `free`, edges are only suggestions |
+| BR-32 | Content is never duplicated to serve two modes | the same `exercises` row appears in a `graph` set and a `free` set |
 
 ---
 
-## UC-35 — Nộp bài
+## UC-35 — Submit a solution
 
 | | |
 | --- | --- |
-| **Actor chính** | Học viên |
-| **Actor phụ** | Hệ thống chấm bài |
-| **Quan hệ** | `«include»` UC-36 · được `«extend»` bởi UC-37, UC-72 |
-| **Tiền điều kiện** | Bài tập đang mở khoá (UC-32); có mã nguồn |
-| **Hậu điều kiện** | Có bản ghi `submissions`; `exercise_progress` được cập nhật |
+| **Primary actor** | Learner |
+| **Supporting actor** | Grading system |
+| **Relationship** | `«include»` UC-36 · `«extend»`ed by UC-37, UC-72 |
+| **Precondition** | The exercise is unlocked (UC-32); there is source code |
+| **Postcondition** | A `submissions` record exists; `exercise_progress` is updated |
 
-**Luồng chính**
+**Main flow**
 
-1. Học viên bấm *Nộp bài*.
-2. Hệ thống xác định `attempt_number` kế tiếp cho cặp (học viên, bài tập).
-3. Tạo `submissions` với `verdict='pending'`.
-4. **«include» UC-36** — gửi mã nguồn + toàn bộ test case sang Hệ thống chấm bài.
-5. Nhận kết quả: verdict, số test đạt, thời gian, bộ nhớ.
-6. Ghi chi tiết từng test vào Mongo `submission_run_details`, lưu `run_detail_ref`.
-7. Cập nhật `exercise_progress`: `attempt_count += 1`; nếu `verdict='accepted'` thì
-   `status='solved'`, `first_solved_at` (nếu chưa có), `best_score`.
-8. Hiển thị kết quả — test ẩn chỉ hiện *đạt/không đạt*, không lộ dữ liệu vào/ra.
+1. The learner clicks *Submit*.
+2. The system works out the next `attempt_number` for the (learner, exercise) pair.
+3. Create `submissions` with `verdict='pending'`.
+4. **«include» UC-36** — send the source code + every test case to the grading system.
+5. Receive the result: verdict, tests passed, time, memory.
+6. Write per-test details to Mongo `submission_run_details` and store `run_detail_ref`.
+7. Update `exercise_progress`: `attempt_count += 1`; if `verdict='accepted'`, set
+   `status='solved'`, `first_solved_at` (if not set yet) and `best_score`.
+8. Show the result — hidden tests show only *pass/fail*, never their inputs or outputs.
 
-**Luồng thay thế**
+**Alternative flows**
 
-- *2a.* **«extend» UC-37** — quá `due_at` và `allow_late_submission = true`
-  → đặt `submissions.is_late = true`, vẫn chấm bình thường.
-- *8a.* **«extend» UC-72** — verdict ≠ `accepted`, học viên yêu cầu AI phân tích lỗi.
+- *2a.* **«extend» UC-37** — past `due_at` with `allow_late_submission = true`
+  → set `submissions.is_late = true` and grade as usual.
+- *8a.* **«extend» UC-72** — verdict ≠ `accepted` and the learner asks the AI to analyse the error.
 
-**Luồng ngoại lệ**
+**Exception flows**
 
-- *E1.* Quá `due_at` và `allow_late_submission = false` → từ chối nộp.
-- *E2.* Vượt `attempt_limit` của bài được giao → từ chối.
-- *E3.* Lỗi biên dịch → `verdict='compile_error'`, `score=0`; **vẫn lưu** bản nộp.
-- *E4.* Hệ thống chấm không phản hồi → giữ `verdict='pending'`, cho phép chấm lại. Bản nộp
-  **không** bị mất.
+- *E1.* Past `due_at` with `allow_late_submission = false` → reject the submission.
+- *E2.* The assignment's `attempt_limit` is exceeded → reject.
+- *E3.* Compile error → `verdict='compile_error'`, `score=0`; the submission **is still stored**.
+- *E4.* The grading system does not respond → keep `verdict='pending'` and allow regrading. The
+  submission is **not** lost.
 
-**Quy tắc nghiệp vụ**
+**Business rules**
 
-| Mã | Quy tắc | Cưỡng chế tại |
+| Code | Rule | Enforced by |
 | --- | --- | --- |
-| BR-40 | `attempt_number` duy nhất theo (học viên, bài tập) | UNIQUE `(user_id, exercise_id, attempt_number)` |
+| BR-40 | `attempt_number` is unique per (learner, exercise) | UNIQUE `(user_id, exercise_id, attempt_number)` |
 | BR-41 | `passed_tests ≤ total_tests` | CHECK `submissions_passed_le_total` |
-| BR-42 | Không xoá bài tập còn bản nộp | FK `ON DELETE RESTRICT` |
-| BR-43 | Bản nộp nhóm có `assignment_id`; luyện tập tự do thì NULL | cột nullable — không cần cột phân loại |
-| BR-44 | Chi tiết chấm tự hết hạn sau 180 ngày; verdict thì không | TTL index Mongo |
+| BR-42 | An exercise with submissions cannot be deleted | FK `ON DELETE RESTRICT` |
+| BR-43 | Group submissions have an `assignment_id`; free practice has NULL | nullable column — no type column needed |
+| BR-44 | Grading details expire after 180 days; the verdict does not | Mongo TTL index |
 
 ---
 
-## UC-47 / UC-48 — Thiết lập điều kiện tiên quyết & kiểm tra chu trình
+## UC-47 / UC-48 — Set prerequisites & check for cycles
 
 | | |
 | --- | --- |
-| **Actor chính** | Quản trị viên |
-| **Quan hệ** | UC-47 `«include»` UC-48 |
-| **Tiền điều kiện** | Hai đối tượng cùng phạm vi (cùng khoá / cùng lộ trình / cùng bộ) |
-| **Hậu điều kiện** | Cạnh được ghi, hoặc bị từ chối kèm lý do; đồ thị luôn là DAG |
+| **Primary actor** | Administrator |
+| **Relationship** | UC-47 `«include»` UC-48 |
+| **Precondition** | Both items share a scope (same course / same path / same set) |
+| **Postcondition** | The edge is written, or rejected with a reason; the graph is always a DAG |
 
-**Hiện trạng:** đặc tả bên dưới mô tả thiết kế gốc (5 cấp). `0021_drop_unused_prerequisite_graph.sql`
-đã xoá 4/5 bảng `*_prerequisites` (chapter/course/roadmap_course/exercise) và các hàm
-`fn_*_available` tương ứng vì chưa từng có usecase/DTO nào ghi vào — không lecturer studio nào có
-UI đặt điều kiện tiên quyết kiểu đồ thị. Cấp còn sống duy nhất là **bài học**, và ở đó cạnh được
-**suy tự động** từ thứ tự chương/bài (`deriveLessonSources`) khi lưu curriculum — không có luồng
-"quản trị viên tự chọn quan hệ logic" nào chạy trong ứng dụng. Xem `02-dependency-model.md`.
+**Current state:** the specification below describes the original design (5 levels).
+`0021_drop_unused_prerequisite_graph.sql` removed 4 of the 5 `*_prerequisites` tables
+(chapter/course/roadmap_course/exercise) and the matching `fn_*_available` functions because no
+use case or DTO ever wrote to them — no lecturer studio has a UI for graph-style prerequisites. The
+only surviving level is **lessons**, where edges are **derived automatically** from the
+chapter/lesson order (`deriveLessonSources`) when the curriculum is saved — no "administrator
+picks the logical relationship" flow runs in the application. See `02-dependency-model.md`.
 
-**Luồng chính (thiết kế gốc, không còn hiện thực ngoài lesson)**
+**Main flow (original design, no longer implemented outside lessons)**
 
-1. Quản trị viên chọn đối tượng cần đặt điều kiện (bài học / chương / khoá / bài tập).
-2. Chọn một hoặc nhiều đối tượng tiên quyết.
-3. Chọn quan hệ logic:
-   - *Tất cả* → cùng một `group_index`
-   - *Một trong số* → mỗi cái một `group_index` khác nhau
-4. **«include» UC-48** — CSDL kiểm tra chu trình trước khi ghi.
-5. Ghi cạnh vào bảng `*_prerequisites` tương ứng.
+1. The administrator picks the item that needs a condition (lesson / chapter / course / exercise).
+2. Picks one or more prerequisite items.
+3. Picks the logical relationship:
+   - *All of* → the same `group_index`
+   - *One of* → a different `group_index` for each
+4. **«include» UC-48** — the database checks for cycles before writing.
+5. Write the edge to the matching `*_prerequisites` table.
 
-**Luồng ngoại lệ**
+**Exception flows**
 
-| Mã | Trường hợp | Cơ chế chặn | SQLSTATE |
+| Code | Case | Blocked by | SQLSTATE |
 | --- | --- | --- | --- |
-| E1 | Tự tham chiếu (A→A) | CHECK `*_no_self_reference` | `23514` |
-| E2 | Cạnh trùng | PRIMARY KEY | `23505` |
-| E3 | **Chu trình trực tiếp** (A→B rồi B→A) | trigger `fn_prevent_dependency_cycle` | `23514` |
-| E4 | **Chu trình gián tiếp** (A→B→C→A) | cùng trigger, lần theo đệ quy | `23514` |
-| E5 | Khác phạm vi (bài của khoá khác) | FOREIGN KEY tổ hợp | `23503` |
-| E6 | Đối tượng không tồn tại | FOREIGN KEY | `23503` |
-| E7 | Trỏ tới nội dung đã lưu trữ | trigger `fn_reject_archived_*` | `23514` |
+| E1 | Self-reference (A→A) | CHECK `*_no_self_reference` | `23514` |
+| E2 | Duplicate edge | PRIMARY KEY | `23505` |
+| E3 | **Direct cycle** (A→B, then B→A) | trigger `fn_prevent_dependency_cycle` | `23514` |
+| E4 | **Indirect cycle** (A→B→C→A) | the same trigger, walking recursively | `23514` |
+| E5 | Different scope (a lesson from another course) | composite FOREIGN KEY | `23503` |
+| E6 | The item does not exist | FOREIGN KEY | `23503` |
+| E7 | Points at archived content | trigger `fn_reject_archived_*` | `23514` |
 
-**Cách phát hiện chu trình:** trước khi thêm *"S phải trước T"*, lần theo cạnh xuôi từ **T** xem có tới
-được **S** không. Nếu có thì cạnh mới khép vòng. Dùng `UNION` (không phải `UNION ALL`) nên dữ
-liệu lỗi sẵn có cũng không làm treo.
+**How cycles are detected:** before adding *"S must come before T"*, follow the edges forward from
+**T** and see whether **S** is reachable. If it is, the new edge closes a loop. `UNION` (not
+`UNION ALL`) is used, so pre-existing bad data cannot make it hang.
 
-**Quy tắc nghiệp vụ**
+**Business rules**
 
-| Mã | Quy tắc | Ghi chú |
+| Code | Rule | Notes |
 | --- | --- | --- |
-| BR-50 | Đồ thị tiên quyết luôn là DAG | không có ngoại lệ |
-| BR-51 | Điều kiện của lộ trình trỏ tới `roadmap_courses.id`, không phải `courses.id` | để cùng một khoá bị khoá ở lộ trình này, tự do ở lộ trình khác |
-| BR-52 | Cạnh bài tập gắn với **một bộ** | cùng bài có thể bị khoá ở bộ A, tự do ở bộ B |
+| BR-50 | The prerequisite graph is always a DAG | no exceptions |
+| BR-51 | A path's conditions point at `roadmap_courses.id`, not `courses.id` | so one course can be locked in one path and free in another |
+| BR-52 | An exercise edge belongs to **one set** | the same exercise can be locked in set A and free in set B |
 
-Kiểm chứng: `postgres/verify.sql` mục C — cả 7 trường hợp đều được khẳng định là bị từ chối.
+Verified by: `postgres/verify.sql` section C — all 7 cases are asserted to be rejected.
 
 ---
 
-## UC-53 — Tải tài liệu lên nhóm
+## UC-53 — Upload a document to the group
 
 | | |
 | --- | --- |
-| **Actor chính** | Thành viên nhóm |
-| **Actor phụ** | Dịch vụ AI |
-| **Quan hệ** | `«include»` UC-54 Tiền kiểm AI, UC-5B Ghi nhận hoạt động |
-| **Tiền điều kiện** | Là thành viên `active`; **quyền `uploadDoc` = true** |
-| **Hậu điều kiện** | `group_documents` được tạo với hai trục trạng thái độc lập |
+| **Primary actor** | Group member |
+| **Supporting actor** | AI service |
+| **Relationship** | `«include»` UC-54 AI pre-check, UC-5B Record activity |
+| **Precondition** | An `active` member; **`uploadDoc` permission = true** |
+| **Postcondition** | `group_documents` is created with two independent status axes |
 
-**Luồng chính**
+**Main flow**
 
-1. Thành viên chọn tệp hoặc dán liên kết, nhập tiêu đề và chủ đề.
-2. Hệ thống kiểm tra quyền `uploadDoc` hiệu lực *(quyền vai trò chồng quyền cá nhân)*.
-3. Lưu tệp vào kho đối tượng, ghi `storage_key`; hoặc ghi `url` nếu là liên kết.
-4. **«include» UC-54** — gửi nội dung cho Dịch vụ AI tiền kiểm → nhận `ai_verdict`.
-5. Tạo `group_documents` với `status='pending'` và `ai_verdict` vừa nhận.
-6. **«include» UC-5B** — ghi hoạt động vào `group_activities`.
-7. Tài liệu vào hàng đợi duyệt (UC-55).
+1. The member picks a file or pastes a link, and enters a title and a topic.
+2. The system checks the effective `uploadDoc` permission *(role permission overlaid with the
+   personal override)*.
+3. Store the file in object storage and record `storage_key`; or record `url` for a link.
+4. **«include» UC-54** — send the content to the AI service for a pre-check → receive `ai_verdict`.
+5. Create `group_documents` with `status='pending'` and the `ai_verdict` just received.
+6. **«include» UC-5B** — record the activity in `group_activities`.
+7. The document enters the review queue (UC-55).
 
-**Luồng thay thế**
+**Alternative flows**
 
-- *4a.* `ai_verdict='valid'` và nhóm bật tự động duyệt → `status='published'` ngay.
-- *4b.* Dịch vụ AI không phản hồi → `ai_verdict='valid'` mặc định, đánh dấu cần người xem kỹ.
-  **Không** chặn việc tải lên.
+- *4a.* `ai_verdict='valid'` and the group has auto-approval on → `status='published'` at once.
+- *4b.* The AI service does not respond → default to `ai_verdict='valid'`, flagged for a closer
+  human look. The upload is **not** blocked.
 
-**Luồng ngoại lệ**
+**Exception flows**
 
-- *E1.* Không có quyền `uploadDoc` → từ chối.
-- *E2.* Loại tệp không hỗ trợ hoặc quá dung lượng → từ chối trước khi lưu.
+- *E1.* No `uploadDoc` permission → reject.
+- *E2.* Unsupported file type or too large → reject before storing.
 
-**Quy tắc nghiệp vụ**
+**Business rules**
 
-| Mã | Quy tắc | Cưỡng chế tại |
+| Code | Rule | Enforced by |
 | --- | --- | --- |
-| BR-60 | Tài liệu `Link` phải có `url`; tài liệu tệp phải có `storage_key` | CHECK `group_documents_body_present` |
-| BR-61 | `status` (người duyệt) và `ai_verdict` (máy) là **hai trục độc lập** | hai cột riêng |
-| BR-62 | Chỉ tài liệu `published` mới hiện với thành viên thường | logic ứng dụng |
+| BR-60 | A `Link` document must have a `url`; a file document must have a `storage_key` | CHECK `group_documents_body_present` |
+| BR-61 | `status` (reviewer) and `ai_verdict` (machine) are **two independent axes** | two separate columns |
+| BR-62 | Only `published` documents are visible to regular members | application logic |
 
 ---
 
-## UC-58 — Chấm & phản hồi bài nộp của nhóm
+## UC-58 — Grade & give feedback on group submissions
 
 | | |
 | --- | --- |
-| **Actor chính** | Quản lý nhóm |
-| **Tiền điều kiện** | **Quyền `reviewSubmission` = true**; tồn tại bản nộp |
-| **Hậu điều kiện** | `assignments.review_status` khác `pending`; có `reviewed_by`, `reviewed_at` |
+| **Primary actor** | Group manager |
+| **Precondition** | **`reviewSubmission` permission = true**; a submission exists |
+| **Postcondition** | `assignments.review_status` is no longer `pending`; `reviewed_by`, `reviewed_at` are set |
 
-**Luồng chính**
+**Main flow**
 
-1. Người duyệt mở hàng đợi bài chờ chấm của nhóm.
-2. Chọn một bài, xem mã nguồn và kết quả chấm tự động.
-3. Nhập nhận xét, chọn *Đạt* hoặc *Cần sửa*.
-4. Cập nhật `assignments`: `review_status`, `feedback`, `reviewed_by`, `reviewed_at`.
-5. **«include» UC-5B** — ghi hoạt động.
+1. The reviewer opens the group's grading queue.
+2. Picks a submission and views its source code and automatic grading result.
+3. Writes feedback and chooses *Pass* or *Needs fixes*.
+4. Update `assignments`: `review_status`, `feedback`, `reviewed_by`, `reviewed_at`.
+5. **«include» UC-5B** — record the activity.
 
-**Luồng thay thế**
+**Alternative flows**
 
-- *3a.* Chọn *Cần sửa* → `review_status='needsfix'`, thành viên nộp lại nếu `allow_retry=true`.
+- *3a.* *Needs fixes* is chosen → `review_status='needsfix'`; the member resubmits if
+  `allow_retry=true`.
 
-**Luồng ngoại lệ**
+**Exception flows**
 
-- *E1.* Không có quyền `reviewSubmission` → từ chối. *Lưu ý: một phó nhóm cụ thể có thể bị gỡ
-  quyền này qua `group_member_permissions`.*
-- *E2.* Tự chấm bài của chính mình → từ chối *(quy tắc ứng dụng)*.
+- *E1.* No `reviewSubmission` permission → reject. *Note: a specific deputy can lose this
+  permission through `group_member_permissions`.*
+- *E2.* Grading one's own submission → reject *(application rule)*.
 
-**Quy tắc nghiệp vụ**
+**Business rules**
 
-| Mã | Quy tắc | Cưỡng chế tại |
+| Code | Rule | Enforced by |
 | --- | --- | --- |
 | BR-70 | `review_status='pending'` ⟺ `reviewed_at IS NULL` | CHECK `assignments_reviewed_consistency` |
-| BR-71 | Bài nộp và người chấm phải cùng nhóm | FK tổ hợp `assignments_member_in_group` |
-| BR-72 | Người có `role='owner'` luôn có mọi quyền | không lưu trong `group_role_permissions`; bộ phân giải mặc định `true` |
+| BR-71 | The submission and the reviewer belong to the same group | composite FK `assignments_member_in_group` |
+| BR-72 | A member with `role='owner'` always has every permission | not stored in `group_role_permissions`; the resolver defaults to `true` |
 
 ---
 
-## UC-51 — Tham gia nhóm bằng mã mời
+## UC-51 — Join a group with an invite code
 
 | | |
 | --- | --- |
-| **Actor chính** | Học viên |
-| **Tiền điều kiện** | Đã đăng nhập; chưa là thành viên nhóm đó |
-| **Hậu điều kiện** | `group_members(role='member', status='active')`; `member_count` được cập nhật |
+| **Primary actor** | Learner |
+| **Precondition** | Signed in; not yet a member of that group |
+| **Postcondition** | `group_members(role='member', status='active')`; `member_count` is updated |
 
-**Luồng chính**
+**Main flow**
 
-1. Học viên nhập mã mời.
-2. Hệ thống tra `study_groups.invite_code` *(không phân biệt hoa thường)*.
-3. Kiểm tra nhóm `status='active'`.
-4. Tạo `group_members` với `role='member'`.
-5. Trigger cập nhật `study_groups.member_count`.
+1. The learner enters an invite code.
+2. The system looks up `study_groups.invite_code` *(case-insensitive)*.
+3. Checks the group has `status='active'`.
+4. Creates `group_members` with `role='member'`.
+5. A trigger updates `study_groups.member_count`.
 
-**Luồng ngoại lệ**
+**Exception flows**
 
-- *E1.* Mã không tồn tại → báo lỗi chung, **không** tiết lộ nhóm có tồn tại hay không.
-- *E2.* Đã là thành viên → chuyển thẳng vào nhóm.
-- *E3.* Nhóm đã lưu trữ → từ chối.
+- *E1.* The code does not exist → a generic error that does **not** reveal whether the group exists.
+- *E2.* Already a member → go straight into the group.
+- *E3.* The group is archived → reject.
 
-**Quy tắc nghiệp vụ**
+**Business rules**
 
-| Mã | Quy tắc | Cưỡng chế tại |
+| Code | Rule | Enforced by |
 | --- | --- | --- |
-| BR-80 | Mã mời duy nhất, 5–12 ký tự chữ và số | UNIQUE + CHECK `study_groups_invite_code_format` |
-| BR-81 | Mỗi người chỉ một bản ghi trong một nhóm | UNIQUE `(group_id, user_id)` |
-| BR-82 | Mỗi nhóm đúng một trưởng nhóm | UNIQUE INDEX `uq_group_members_single_owner` |
+| BR-80 | Invite codes are unique, 5–12 alphanumeric characters | UNIQUE + CHECK `study_groups_invite_code_format` |
+| BR-81 | One record per person per group | UNIQUE `(group_id, user_id)` |
+| BR-82 | Exactly one owner per group | UNIQUE INDEX `uq_group_members_single_owner` |
 
 ---
 
-## Phụ lục — Bảng quy tắc nghiệp vụ
+## Appendix — Business rules
 
-| Mã | Tóm tắt | Nơi cưỡng chế |
+| Codes | Summary | Enforced by |
 | --- | --- | --- |
-| BR-01…03 | Định danh tài khoản | UNIQUE, CHECK |
-| BR-10…11 | Truy cập nội dung | CHECK + ứng dụng |
-| BR-20…22 | Điều kiện mở khoá | `fn_lesson_available` |
-| BR-30…32 | Chế độ học | `mode_override` |
-| BR-40…44 | Nộp bài & chấm | UNIQUE, CHECK, FK RESTRICT, TTL |
-| BR-50…52 | Toàn vẹn đồ thị phụ thuộc | trigger + FK tổ hợp |
-| BR-60…62 | Tài liệu nhóm | CHECK |
-| BR-70…72 | Duyệt bài & phân quyền | CHECK + FK tổ hợp |
-| BR-80…82 | Thành viên nhóm | UNIQUE + partial index |
+| BR-01…03 | Account identity | UNIQUE, CHECK |
+| BR-10…11 | Content access | CHECK + application |
+| BR-20…22 | Unlock conditions | `fn_lesson_available` |
+| BR-30…32 | Learning modes | `mode_override` |
+| BR-40…44 | Submission & grading | UNIQUE, CHECK, FK RESTRICT, TTL |
+| BR-50…52 | Dependency graph integrity | trigger + composite FK |
+| BR-60…62 | Group documents | CHECK |
+| BR-70…72 | Reviews & permissions | CHECK + composite FK |
+| BR-80…82 | Group membership | UNIQUE + partial index |
 
-**36/40 quy tắc được cưỡng chế ở tầng CSDL**, không phụ thuộc vào tầng ứng dụng nhớ kiểm tra —
-đúng nguyên tắc đã đặt ra ở [`04-design-decisions.md`](04-design-decisions.md).
+**36 of the 40 rules are enforced in the database**, independent of the application remembering
+to check — exactly the principle set in [`04-design-decisions.md`](04-design-decisions.md).

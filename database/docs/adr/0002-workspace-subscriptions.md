@@ -24,7 +24,7 @@ so every period is paid manually.
 | Owner | Tables |
 | --- | --- |
 | learning-service (commerce) | `workspace_plans`, `workspace_plan_versions`, `workspace_billing_settings`, `workspace_subscriptions`, `workspace_subscription_terms`, `workspace_orders`, `workspace_coupons`, `workspace_coupon_redemptions`, `workspace_entitlement_adjustments`; shares `commerce_payments` and the ledger |
-| workspace-service | `workspace_storage_reservations` |
+| workspace-service | `workspace_storage_reservations`, `workspace_ai_usage`, `workspace_ownership_transfers` |
 
 workspace-service reads entitlements through the SQL function
 `workspace_effective_entitlements(user_id)` — a read contract like a view. It is evaluated inside
@@ -95,6 +95,12 @@ so two requests cannot both take the last slot. An upload reserves bytes when th
 (the size is part of the S3 signature), and the reservation becomes the document row when the
 upload is confirmed.
 
+AI requests to the group Tutor are charged to the group owner's `monthly_ai_requests`, per calendar
+month in Vietnam time, through an atomic conditional upsert on `workspace_ai_usage`.
+
+An ownership transfer is an offer: the recipient accepts within 7 days, and the transfer runs then,
+under both owners' locks, with the recipient's quotas re-checked.
+
 Exceeding a limit after expiry or downgrade is an `OVER_LIMIT` condition: nothing is deleted;
 only operations that consume more of the exceeded quota are refused.
 
@@ -107,3 +113,6 @@ only operations that consume more of the exceeded quota are refused.
   integration supports them.
 - Feature flags not yet backed by behaviour (`advanced_assignments`, `detailed_analytics`) are
   shown as "planned" and grant nothing.
+- Refunds are recorded by an administrator after refunding through the gateway: a compensating
+  journal (`platform → clearing`) and, when the refunded term is current or future, the end of the
+  subscription with reason `refunded`.

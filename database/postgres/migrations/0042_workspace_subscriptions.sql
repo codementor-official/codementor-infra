@@ -268,7 +268,7 @@ ALTER TABLE commerce_payments ADD CONSTRAINT commerce_payments_one_order
   CHECK (num_nonnulls(order_id, workspace_order_id) = 1);
 ALTER TABLE commerce_journals ADD COLUMN workspace_order_id uuid REFERENCES workspace_orders(id);
 
--- ---------------------------------------------------- upload reservations (workspace-service)
+-- --------------------------------- upload reservations, AI usage, transfers (workspace-service)
 CREATE TABLE workspace_storage_reservations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id uuid NOT NULL REFERENCES users(id),
@@ -280,6 +280,32 @@ CREATE TABLE workspace_storage_reservations (
   CHECK (expires_at > created_at)
 );
 CREATE INDEX workspace_storage_reservations_owner ON workspace_storage_reservations(owner_id, expires_at);
+
+-- AI requests charged to the group owner's plan, per calendar month in Vietnam time.
+CREATE TABLE workspace_ai_usage (
+  owner_id uuid NOT NULL REFERENCES users(id),
+  month date NOT NULL CHECK (extract(day FROM month) = 1),
+  requests integer NOT NULL DEFAULT 0 CHECK (requests >= 0),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (owner_id, month)
+);
+
+-- Ownership changes hands only when the recipient accepts; quotas are re-checked then.
+CREATE TABLE workspace_ownership_transfers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL REFERENCES study_groups(id) ON DELETE CASCADE,
+  from_user_id uuid NOT NULL REFERENCES users(id),
+  to_user_id uuid NOT NULL REFERENCES users(id),
+  to_membership_id uuid NOT NULL REFERENCES group_members(id) ON DELETE CASCADE,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','accepted','declined','cancelled')),
+  expires_at timestamptz NOT NULL DEFAULT now() + interval '7 days',
+  decided_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (from_user_id <> to_user_id),
+  CHECK ((status = 'pending') = (decided_at IS NULL))
+);
+CREATE UNIQUE INDEX workspace_ownership_transfers_one_pending ON workspace_ownership_transfers(group_id) WHERE status = 'pending';
+CREATE INDEX workspace_ownership_transfers_recipient ON workspace_ownership_transfers(to_user_id) WHERE status = 'pending';
 CREATE INDEX IF NOT EXISTS study_groups_owner ON study_groups(owner_id);  -- owned-group quota
 
 -- ------------------------------------------------------------------ read contract

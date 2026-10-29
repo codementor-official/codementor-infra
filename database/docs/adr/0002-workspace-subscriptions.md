@@ -46,6 +46,10 @@ a JSON snapshot, and a trigger makes them immutable. Enforcement reads these col
 plan. Each paid period is a row in `workspace_subscription_terms`; a renewal adds a term to the
 same subscription at the same contract price.
 
+Features are the one exception: the read contract returns the snapshot's features united with
+the plan's current version (migration 0043). Features only add, so a subscriber gains what is
+added to their plan and never loses what they bought.
+
 Exceptional grants are additive rows in `workspace_entitlement_adjustments` with a reason, an
 author and a validity window — historical snapshots are never edited.
 
@@ -101,18 +105,34 @@ month in Vietnam time, through an atomic conditional upsert on `workspace_ai_usa
 An ownership transfer is an offer: the recipient accepts within 7 days, and the transfer runs then,
 under both owners' locks, with the recipient's quotas re-checked.
 
-Exceeding a limit after expiry or downgrade is an `OVER_LIMIT` condition: nothing is deleted;
-only operations that consume more of the exceeded quota are refused.
+### Over-limit groups (migration 0043)
+
+Refusing only further consumption left no consequence for staying above a plan: a lapsed owner
+could keep 100 members on Free forever. Deleting data was rejected — it is irreversible and hurts
+members who never paid. Instead, access narrows in stages counted from `workspace_owner_overage.over_since`
+(set by a workspace-service sweep the first time an owner is seen above the plan, cleared when
+they are back within it):
+
+| Stage | From | Effect on affected groups |
+| --- | --- | --- |
+| notice | `over_since` | none; the owner is told the dates |
+| read-only | + `overage_notice_days` (7) | nothing new is added (documents, exercises, assignments, messages, Lecter); viewing, downloading, solving assigned work, deleting and removing members still work |
+| hidden | + `overage_read_only_days` (30) | members cannot open the group; the owner can, to clean up |
+
+Affected groups: those beyond the group allowance (the most recently active stay open), those with
+too many members, and — because storage is shared — all of them when storage is exceeded.
+Restrictions are computed per request from live usage, so an upgrade or clean-up lifts them at
+once; the stored timestamp only drives the countdown and the owner's notices.
 
 ## Consequences
 
-- Existing users get Free automatically and keep all data; owners above Free limits are
-  over-limit until they upgrade or clean up. No row is backfilled.
+- Existing users get Free automatically and keep all data. Owners above Free limits get the
+  same notice period as everyone else from the first sweep after migration 0043.
 - Changing a plan always means publishing a new version.
 - Recurring charges, invoices with tax data and partial refunds are out of scope until a provider
   integration supports them.
-- Feature flags not yet backed by behaviour (`advanced_assignments`, `detailed_analytics`) are
-  shown as "planned" and grant nothing.
+- `advanced_assignments` and `detailed_analytics` gate existing group tools (deadlines, partial
+  assignment, Lecter; per-member progress). Free groups keep whole-group assignments and totals.
 - Refunds are recorded by an administrator after refunding through the gateway: a compensating
   journal (`platform → clearing`) and, when the refunded term is current or future, the end of the
   subscription with reason `refunded`.

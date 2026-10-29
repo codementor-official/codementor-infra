@@ -94,7 +94,7 @@ Two kinds of data, two stores:
 codementor-infra/
 ├── database/
 │   ├── postgres/
-│   │   ├── migrations/        41 numbered, append-only SQL migrations
+│   │   ├── migrations/        43 numbered, append-only SQL migrations
 │   │   ├── seed/              development seed data
 │   │   └── verify.sql         invariant and dependency-guard checks
 │   ├── mongo/
@@ -201,7 +201,7 @@ flowchart LR
     D --> E["codementor-backend:<br/>npm run db:sync, then deploy"]
 ```
 
-- **Append-only.** Add a new numbered file (`0042_…`); never edit a migration that has been applied.
+- **Append-only.** Add a new numbered file (`0044_…`); never edit a migration that has been applied.
 - **Idempotent where possible** (`IF NOT EXISTS`, guarded `DO` blocks) and wrapped in a transaction.
 - **Apply before deploying** the backend version that depends on the change.
 - **Verify** every change with `make database/verify` against a freshly rebuilt stack
@@ -245,6 +245,7 @@ Keycloak binds to loopback and is published over TLS at `https://id.codementor.c
 | [`database/docs/02-dependency-model.md`](database/docs/02-dependency-model.md) | The prerequisite mechanism |
 | [`database/docs/03-mongodb-model.md`](database/docs/03-mongodb-model.md) | Collections, document shapes, indexes |
 | [`database/docs/04-design-decisions.md`](database/docs/04-design-decisions.md) | Trade-offs and their costs |
+| [`database/docs/adr/`](database/docs/adr) | Architecture decisions: manual production migrations, Workspace subscriptions |
 | [`database/docs/05-schema-reference.md`](database/docs/05-schema-reference.md) | Every table, column and constraint — generated, do not edit by hand |
 | [`docs/06-actors.md`](docs/06-actors.md) | Actors and role model |
 | [`docs/07-use-case-model.md`](docs/07-use-case-model.md) | 70 use cases in 9 packages, with diagrams and traceability to the database |

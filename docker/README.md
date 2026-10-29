@@ -91,5 +91,5 @@ creates. Measured 2026-09-16 — Keycloak 526 MB of its 768 MB limit, PostgreSQL
 58 MB, leaving about **769 MB available**.
 
 That is why this stack holds only the three stateful services. Kafka (a JVM), Kong, and the
-eleven application services do not fit here and belong on a separate, larger host; see
-`../plan-deploy-aws.md` in the workspace root.
+eleven application services do not fit here and run on a separate, larger host; see
+`codementor-backend/docker-compose.ec2.yml` and `codementor-backend/scripts/deploy-ec2.sh`.

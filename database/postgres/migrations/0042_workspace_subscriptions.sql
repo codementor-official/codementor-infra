@@ -361,17 +361,17 @@ INSERT INTO workspace_plan_versions (plan_id, version, status, name, tagline, de
 SELECT p.id, 1, 'published', v.name, v.tagline, v.description, v.highlights, v.monthly, v.annual,
   v.groups, v.members, v.storage, v.upload, v.ai, v.features, now(), now()
 FROM (VALUES
-  ('free', 'Free', 'Get started', 'For trying study groups with a few classmates.',
+  ('free', 'Free', 'Bắt đầu miễn phí', 'Dùng thử nhóm học tập cùng vài người bạn.',
    ARRAY[]::text[], 0, NULL::integer,
    1, 10, 104857600::bigint, 10485760::bigint, 30, ARRAY[]::text[]),
-  ('plus', 'Plus', 'Learn together', 'For study groups that meet every week.',
-   ARRAY['Best for weekly study groups'], 99000, 990000,
+  ('plus', 'Plus', 'Học cùng nhau', 'Cho các nhóm học tập sinh hoạt hằng tuần.',
+   ARRAY['Phù hợp nhóm học hằng tuần'], 99000, 990000,
    5, 50, 2147483648::bigint, 104857600::bigint, 200, ARRAY[]::text[]),
-  ('pro', 'Pro', 'Grow your community', 'For mentors running several active communities.',
-   ARRAY['Unlimited members under fair use'], 199000, 1990000,
+  ('pro', 'Pro', 'Phát triển cộng đồng', 'Cho người hướng dẫn quản lý nhiều cộng đồng học tập.',
+   ARRAY['Không giới hạn thành viên (sử dụng hợp lý)'], 199000, 1990000,
    20, NULL, 21474836480::bigint, 262144000::bigint, 500, ARRAY['priority_support']),
-  ('team', 'Team', 'Collaborate at scale', 'For schools and teams with many classes.',
-   ARRAY['Unlimited members under fair use','Highest AI allowance'], 499000, 4990000,
+  ('team', 'Team', 'Cộng tác quy mô lớn', 'Cho trường học và đội nhóm có nhiều lớp.',
+   ARRAY['Không giới hạn thành viên (sử dụng hợp lý)','Hạn mức AI cao nhất'], 499000, 4990000,
    100, NULL, 107374182400::bigint, 524288000::bigint, 1500, ARRAY['priority_support'])
 ) AS v(code, name, tagline, description, highlights, monthly, annual, groups, members, storage, upload, ai, features)
 JOIN workspace_plans p ON p.code = v.code;

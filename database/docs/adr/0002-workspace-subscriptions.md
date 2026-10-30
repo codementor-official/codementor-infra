@@ -129,6 +129,9 @@ once; the stored timestamp only drives the countdown and the owner's notices.
 - Existing users get Free automatically and keep all data. Owners above Free limits get the
   same notice period as everyone else from the first sweep after migration 0043.
 - Changing a plan always means publishing a new version.
+- Coupons (migration 0044 adds a description): the code never changes; the discount only while
+  nobody has used or reserved the coupon; scope, window and caps at any time. Orders keep the
+  terms they were quoted, so an edit only affects later checkouts.
 - Recurring charges, invoices with tax data and partial refunds are out of scope until a provider
   integration supports them.
 - `advanced_assignments` and `detailed_analytics` gate existing group tools (deadlines, partial

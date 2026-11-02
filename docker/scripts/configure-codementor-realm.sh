@@ -257,6 +257,7 @@ fi
 kc update "realms/$realm" \
   -s enabled=true \
   -s loginTheme=codementor \
+  -s emailTheme=codementor \
   -s sslRequired=EXTERNAL \
   -s registrationAllowed=true \
   -s registrationEmailAsUsername=true \

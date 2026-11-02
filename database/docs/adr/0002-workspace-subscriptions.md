@@ -137,5 +137,9 @@ once; the stored timestamp only drives the countdown and the owner's notices.
 - `advanced_assignments` and `detailed_analytics` gate existing group tools (deadlines, partial
   assignment, Lecter; per-member progress). Free groups keep whole-group assignments and totals.
 - Refunds are recorded by an administrator after refunding through the gateway: a compensating
-  journal (`platform → clearing`) and, when the refunded term is current or future, the end of the
-  subscription with reason `refunded`.
+  journal (`platform → clearing`) and the order becomes `refunded`. Since migration 0045 a refunded
+  order's term no longer counts (`workspace_paid_terms`), and the effect depends on that term:
+  not started yet (a renewal paid in advance) → only that term disappears; running → the
+  subscription ends now with reason `refunded` and the account falls back to Free, then to the
+  over-limit stages if it is above Free; already over → money only. An upgrade's credit from the
+  previous plan is not cash and is not refunded. Data is never deleted.

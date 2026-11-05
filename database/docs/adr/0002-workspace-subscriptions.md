@@ -132,8 +132,8 @@ once; the stored timestamp only drives the countdown and the owner's notices.
 - Coupons (migration 0044 adds a description): the code never changes; the discount only while
   nobody has used or reserved the coupon; scope, window and caps at any time. Orders keep the
   terms they were quoted, so an edit only affects later checkouts.
-- Recurring charges, invoices with tax data and partial refunds are out of scope until a provider
-  integration supports them.
+- Recurring charges and invoices with tax data are out of scope until a provider integration
+  supports them.
 - `advanced_assignments` and `detailed_analytics` gate existing group tools (deadlines, partial
   assignment, Lecter; per-member progress). Free groups keep whole-group assignments and totals.
 - Refunds are recorded by an administrator after refunding through the gateway: a compensating
@@ -141,5 +141,12 @@ once; the stored timestamp only drives the countdown and the owner's notices.
   order's term no longer counts (`workspace_paid_terms`), and the effect depends on that term:
   not started yet (a renewal paid in advance) → only that term disappears; running → the
   subscription ends now with reason `refunded` and the account falls back to Free, then to the
-  over-limit stages if it is above Free; already over → money only. An upgrade's credit from the
-  previous plan is not cash and is not refunded. Data is never deleted.
+  over-limit stages if it is above Free; already over → nothing to refund. An upgrade's credit
+  from the previous plan is not cash and is not refunded. Data is never deleted.
+- Since migration 0046 a refund returns the unused share of the order's term (`refunded_vnd`), by
+  the same rule as an upgrade credit: a term not started yet returns everything, a running term
+  returns the time left (half the term used → half the money), a term already over or a
+  subscription already closed (e.g. upgraded, its remainder credited onward) returns nothing. An
+  order paid but never applied returns everything. An administrator may record a different
+  amount (at most what was paid) with the reason; the audit keeps both. Revenue is
+  `amount_vnd - refunded_vnd`.

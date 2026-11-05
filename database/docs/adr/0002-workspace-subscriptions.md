@@ -143,10 +143,13 @@ once; the stored timestamp only drives the countdown and the owner's notices.
   subscription ends now with reason `refunded` and the account falls back to Free, then to the
   over-limit stages if it is above Free; already over → nothing to refund. An upgrade's credit
   from the previous plan is not cash and is not refunded. Data is never deleted.
-- Since migration 0046 a refund returns the unused share of the order's term (`refunded_vnd`), by
-  the same rule as an upgrade credit: a term not started yet returns everything, a running term
-  returns the time left (half the term used → half the money), a term already over or a
-  subscription already closed (e.g. upgraded, its remainder credited onward) returns nothing. An
-  order paid but never applied returns everything. An administrator may record a different
+- Since migration 0046 a refund returns the unused share of the order's term (`refunded_vnd`) in
+  whole days left (24 of 31 days left → 24/31 of the payment), so the amount an administrator
+  previews is the amount recorded that day: a term not started yet returns everything, a running
+  term the days left (half the term used → half the money), a term already over nothing. On a
+  closed subscription a term that never started returns everything, except after an upgrade,
+  which already credited every unused term onward. An order paid but never applied returns
+  everything. A running term cannot be refunded while a renewal paid in advance is still on the
+  subscription: refund the prepaid order first, otherwise ending the subscription strands it. An administrator may record a different
   amount (at most what was paid) with the reason; the audit keeps both. Revenue is
   `amount_vnd - refunded_vnd`.

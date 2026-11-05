@@ -94,7 +94,7 @@ Two kinds of data, two stores:
 codementor-infra/
 ├── database/
 │   ├── postgres/
-│   │   ├── migrations/        45 numbered, append-only SQL migrations
+│   │   ├── migrations/        46 numbered, append-only SQL migrations
 │   │   ├── seed/              development seed data
 │   │   └── verify.sql         invariant and dependency-guard checks
 │   ├── mongo/

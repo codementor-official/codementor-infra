@@ -69,6 +69,9 @@ const schema = {
         "WORKSPACE_ASSIGNMENT_REVIEWED",
         "STUDY_SESSION_REMINDER",
         "COURSE_COMPLETED",
+        // ADR 0005: roadmap completion and certificate issued.
+        "ROADMAP_COMPLETED",
+        "CERTIFICATE_ISSUED",
       ],
     },
 

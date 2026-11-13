@@ -201,7 +201,7 @@ flowchart LR
     D --> E["codementor-backend:<br/>npm run db:sync, then deploy"]
 ```
 
-- **Append-only.** Add a new numbered file (`0050_…`); never edit a migration that has been applied.
+- **Append-only.** Add a new numbered file (`0051_…`); never edit a migration that has been applied.
 - **Idempotent where possible** (`IF NOT EXISTS`, guarded `DO` blocks) and wrapped in a transaction.
 - **Apply before deploying** the backend version that depends on the change.
 - **Verify** every change with `make database/verify` against a freshly rebuilt stack

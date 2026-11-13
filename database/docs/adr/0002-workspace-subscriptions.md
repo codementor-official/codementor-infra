@@ -143,6 +143,10 @@ once; the stored timestamp only drives the countdown and the owner's notices.
   subscription ends now with reason `refunded` and the account falls back to Free, then to the
   over-limit stages if it is above Free; already over → nothing to refund. An upgrade's credit
   from the previous plan is not cash and is not refunded. Data is never deleted.
+- Since migration 0047 `workspace_billing_settings.notices` holds the administrator's switch for
+  each billing notice: `all` (in the app and by email), `app` (in the app only) or `off`. A key
+  never set means `all`, so the column changes nothing until an administrator uses it. A switched
+  off reminder is still recorded as handled, so turning it back on never sends a stale one.
 - Since migration 0046 a refund returns the unused share of the order's term (`refunded_vnd`) in
   whole days left (24 of 31 days left → 24/31 of the payment), so the amount an administrator
   previews is the amount recorded that day: a term not started yet returns everything, a running
